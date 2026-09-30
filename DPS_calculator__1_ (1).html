@@ -856,19 +856,19 @@ const gacha={
 
 const GACHA_DROPS_4550 = {
   45:{name:'Past',speed:'느림',attack:2500,cost:10000,baseShards:5000,rewards:[
-    {kind:'credit',amount:20000000,prob:0.002},{kind:'awakening',amount:1,prob:10},
+    {kind:'credit',amount:20000000,prob:0.002},{kind:'awakening',amount:2,prob:10},
     {kind:'shards',amount:1000000,prob:1.5},{kind:'credit',amount:12000,prob:5},
   ]},
   46:{name:'지구파괴폭탄',speed:'보통',attack:2800,cost:10000,baseShards:20000,rewards:[
-    {kind:'credit',amount:15000000,prob:0.002},{kind:'awakening',amount:1,prob:10},
+    {kind:'credit',amount:15000000,prob:0.002},{kind:'awakening',amount:5,prob:10},
     {kind:'shards',amount:4000000,prob:0.55},{kind:'credit',amount:14000,prob:5},
   ]},
   47:{name:'Fatalis',speed:'빠름',attack:3400,cost:10000,baseShards:90000,rewards:[
-    {kind:'credit',amount:12500000,prob:0.002},{kind:'awakening',amount:1,prob:10},
+    {kind:'credit',amount:12500000,prob:0.002},{kind:'awakening',amount:10,prob:10},
     {kind:'shards',amount:7000000,prob:0.47},{kind:'credit',amount:15000,prob:5},
   ]},
   48:{name:'infinite.',speed:'극한',attack:6550,cost:10000,baseShards:300000,rewards:[
-    {kind:'credit',amount:10000000,prob:0.002},{kind:'awakening',amount:1,prob:10},
+    {kind:'credit',amount:10000000,prob:0.002},{kind:'awakening',amount:20,prob:10},
     {kind:'shards',amount:10000000,prob:0.99},{kind:'credit',amount:16000,prob:5},
   ]},
   49:{name:"Yuuki' Asuna",speed:'초월',attack:6550,cost:10000,baseShards:1000000,rewards:[
@@ -2857,7 +2857,7 @@ function newVerGachaSheetHTML(){
     <p class="note" style="margin-top:6px;margin-bottom:8px">52~60강 유닛 판매 시 「기본 지급」은 항상 받고, 「뽑기」는 표의 확률로 나옵니다. <b>특별 핫타임 확률</b>은 특별 핫타임이 켜져 있을 때 적용되는 확률입니다(54~56강에서만 일반 확률과 다름). 「1마리당 기댓값」 = 개수 × 확률. 뽑기 배수(O)는 45~50강에만 표시되어 있습니다.</p>
     <div style="overflow-x:auto"><table><tr><th>단계</th><th style="text-align:left">구분</th><th style="text-align:left">보상</th><th>개수</th><th>확률(%)</th><th>특별 핫타임 확률(%)</th><th>뽑기 배수</th><th>1마리당 기댓값</th></tr>${rows}</table></div>
     <b style="display:block;margin-top:14px;font-size:.9rem">45~50강 뽑기 — 기존 [44~50강] 탭 데이터와 대조</b>
-    <p class="note" style="margin-top:4px;margin-bottom:8px">45~50강의 기본 지급 무색 조각, 크레딧·무색 조각 개수와 확률은 시트와 기존 계산기 값이 전부 일치해 그대로 유지했습니다. <b>각성의 보석 개수만 서로 다릅니다</b>(확률 10%는 같음). 기존 값은 계산에 쓰이고 있어 바꾸지 않았으니, 어느 쪽이 맞는지 확인이 필요합니다.</p>
+    <p class="note" style="margin-top:4px;margin-bottom:8px">45~50강의 기본 지급 무색 조각, 크레딧·무색 조각 개수와 확률은 시트와 기존 계산기 값이 전부 일치해 그대로 유지했습니다. <b>각성의 보석 개수만 다릅니다</b>(확률 10%는 같음). 최근 패치로 45~48강은 2/5/10/20개가 맞는 것으로 확인되어 계산기 값을 시트에 맞췄습니다. 49·50강(계산기 7·75개, 시트 50·100개)은 패치 여부를 아직 확인하지 못해 기존 값을 유지했습니다.</p>
     <table><tr><th>단계</th><th>계산기 기존값</th><th>뽑기 시트</th><th>비교</th></tr>${cmp}</table>
   </div>
 `;
@@ -2868,7 +2868,7 @@ function newVerSupportSheetHTML(){
   return `
   <div class="result" style="margin-top:20px;">
     <b>[11] 후원 LV별 누적 수치표 (후원 시트)</b>
-    <p class="note" style="margin-top:6px;margin-bottom:8px">위 [3-5]의 후원 특전 문구를 LV.1~20마다 「그 단계까지 적용된 값」으로 합쳐 둔 시트입니다. 「최종 배수」는 그 LV에서 실제로 적용되는 배수(덮어쓰기 결과), 「+%」·하락 방어 시간은 합산 결과입니다. 엑보 FI 열은 후원으로 더해지는 ExPoint입니다(LV.6~11 +5천/+2만, LV.12~ +1만/+3만). 기존 문구와 값이 모두 일치합니다. 시트의 LV.9 설명에는 오프라인 보상 항목이 없어서 [3-5]의 「오프라인 인정 시간 +48시간, 수령량 +100%」는 시트로 확인되지 않은 채 유지했습니다.</p>
+    <p class="note" style="margin-top:6px;margin-bottom:8px">위 [3-5]의 후원 특전 문구를 LV.1~20마다 「그 단계까지 적용된 값」으로 합쳐 둔 시트입니다. 「최종 배수」는 그 LV에서 실제로 적용되는 배수(덮어쓰기 결과), 「+%」·하락 방어 시간은 합산 결과입니다. 엑보 FI 열은 후원으로 더해지는 ExPoint입니다(LV.6~11 +5천/+2만, LV.12~ +1만/+3만). 기존 문구와 값이 모두 일치합니다. 시트의 LV.9 설명에는 오프라인 보상 항목이 빠져 있지만, [3-5]의 「오프라인 인정 시간 +48시간, 수령량 +100%」는 인게임에서 확인된 내용이라 그대로 유지합니다.</p>
     <div style="overflow-x:auto"><table><tr>${h.map(x => `<th style="white-space:normal;min-width:4.5em">${x}</th>`).join('')}</tr>${rows}</table></div>
   </div>
 `;
