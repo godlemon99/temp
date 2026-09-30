@@ -872,12 +872,12 @@ const GACHA_DROPS_4550 = {
     {kind:'shards',amount:10000000,prob:0.99},{kind:'credit',amount:16000,prob:5},
   ]},
   49:{name:"Yuuki' Asuna",speed:'초월',attack:6550,cost:10000,baseShards:1000000,rewards:[
-    {kind:'credit',amount:9500000,prob:0.002},{kind:'awakening',amount:7,prob:10},
+    {kind:'credit',amount:9500000,prob:0.002},{kind:'awakening',amount:50,prob:10},
     {kind:'shards',amount:100000000,prob:1.5},{kind:'shards',amount:10000000,prob:15},
     {kind:'credit',amount:2700,prob:30},
   ]},
   50:{name:'GALAXY_BURST',speed:'무한 (2연타)',attack:6550,cost:10000,baseShards:10000000,rewards:[
-    {kind:'credit',amount:15000000,prob:0.002},{kind:'awakening',amount:75,prob:10},
+    {kind:'credit',amount:15000000,prob:0.002},{kind:'awakening',amount:100,prob:10},
     {kind:'shards',amount:1000000000,prob:15},{kind:'credit',amount:2000,prob:35},
   ]},
 };
@@ -2857,7 +2857,7 @@ function newVerGachaSheetHTML(){
     <p class="note" style="margin-top:6px;margin-bottom:8px">52~60강 유닛 판매 시 「기본 지급」은 항상 받고, 「뽑기」는 표의 확률로 나옵니다. <b>특별 핫타임 확률</b>은 특별 핫타임이 켜져 있을 때 적용되는 확률입니다(54~56강에서만 일반 확률과 다름). 「1마리당 기댓값」 = 개수 × 확률. 뽑기 배수(O)는 45~50강에만 표시되어 있습니다.</p>
     <div style="overflow-x:auto"><table><tr><th>단계</th><th style="text-align:left">구분</th><th style="text-align:left">보상</th><th>개수</th><th>확률(%)</th><th>특별 핫타임 확률(%)</th><th>뽑기 배수</th><th>1마리당 기댓값</th></tr>${rows}</table></div>
     <b style="display:block;margin-top:14px;font-size:.9rem">45~50강 뽑기 — 기존 [44~50강] 탭 데이터와 대조</b>
-    <p class="note" style="margin-top:4px;margin-bottom:8px">45~50강의 기본 지급 무색 조각, 크레딧·무색 조각 개수와 확률은 시트와 기존 계산기 값이 전부 일치해 그대로 유지했습니다. <b>각성의 보석 개수만 다릅니다</b>(확률 10%는 같음). 최근 패치로 45~48강은 2/5/10/20개가 맞는 것으로 확인되어 계산기 값을 시트에 맞췄습니다. 49·50강(계산기 7·75개, 시트 50·100개)은 패치 여부를 아직 확인하지 못해 기존 값을 유지했습니다.</p>
+    <p class="note" style="margin-top:4px;margin-bottom:8px">45~50강의 기본 지급 무색 조각, 크레딧·무색 조각 개수와 확률은 시트와 기존 계산기 값이 전부 일치해 그대로 유지했습니다. <b>각성의 보석 개수만 다릅니다</b>(확률 10%는 같음). 최근 패치로 바뀐 값(2/5/10/20/50/100개)이 시트와 같아 계산기 값을 시트에 맞췄습니다. 「계산기 기존값」 열은 현재 계산기가 쓰는 값입니다.</p>
     <table><tr><th>단계</th><th>계산기 기존값</th><th>뽑기 시트</th><th>비교</th></tr>${cmp}</table>
   </div>
 `;
