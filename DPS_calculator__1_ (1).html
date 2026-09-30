@@ -274,7 +274,7 @@ function setStatInvSynced(page, no, val, max){
   if(typeof refreshEarly==='function') refreshEarly();
 }
 
-// ===================== 신버전(T.000) 고유유닛(레이스) 버프 — Q~X 7옵션, 전역 공유 상태 =====================
+// ===================== 신버전(T.008) 고유유닛(레이스) 버프 — Q~X 7옵션, 전역 공유 상태 =====================
 // [신버전 정보] 탭 [1] 표와 동일한 데이터. 다른 탭에서도 이 전역 상태를 그대로 읽어 쓸 수 있다.
 const RACE_OPTIONS = [
   { key:'Q', name:'공격속도',        max:6,  desc:'쿨타임 72→48→24→12→6→3→1', steps:[72,48,24,12,6,3,1] },
@@ -1109,7 +1109,7 @@ const tabs=[
   {id:'special4050',label:'44~50강 강화확률',render:renderSpecial4050},
   {id:'strength5159',label:'51~56강(Ex경험치/일반~우주 크리스탈)',render:renderStrength5159},
   {id:'quasar5759',label:'57~59강 정보(퀘이사 크리스탈)',render:renderQuasar5759},
-  {id:'newversion',label:'⚠️ 신버전(T.000) 정보',render:renderNewVersion},
+  {id:'newversion',label:'⚠️ 신버전(T.008) 정보',render:renderNewVersion},
 ];
 
 const nav=document.getElementById('tabnav');
@@ -2886,7 +2886,7 @@ function newVerDpsRewardSheetHTML(){
 }
 
 
-// ===================== ⚠️ 신버전(T.000) 정보 — 대개편으로 기존 공식 대부분 무효화 =====================
+// ===================== ⚠️ 신버전(T.008) 정보 — 대개편으로 기존 공식 대부분 무효화 =====================
 // 아래 [1]~[7]은 사용자가 전달한 패치노트 원문 + 인게임 스샷(고유유닛 승급 옵션)을 정리해 둔 것입니다.
 // 아직 정식 계산식으로 변환하지 않은 "확인된 사실"만 모아둔 저장소이며, 1강 구간부터 차근차근
 // 다시 붙여나갈 예정입니다. 이 탭 아래의 다른 모든 탭(초반효율/41~50강/51~56강 등)은
@@ -3193,7 +3193,7 @@ function renderNewVersion(){
 
   <div class="result" style="margin-top:20px; border-top:2px dashed var(--border); padding-top:16px;">
     <b>진행 메모</b>
-    <p class="note" style="margin-top:6px;margin-bottom:0">공개 테스트(T.001) 진행 중 — 1강 구간부터 실측하며 이 계산기를 다시 붙여나갈 예정. 아래 다른 탭들은 전부 구버전(SCA 정식판) 공식 기준이므로, 신버전 수치를 다룰 땐 이 탭의 내용을 우선 참고하세요. <b>1강~44강을 "판매시 EXP를 얻는 구간"으로 묶어 별도의 신버전 효율 분석표(39강 이하/40~44강 분리, 상단 배치, 41~50강 탭은 45~50강 생산·보석 효율에 집중)를 새로 만드는 작업은 아래 데이터가 더 필요해 보류 중입니다 — 자세한 목록은 채팅 답변 참고.</b></p>
+    <p class="note" style="margin-top:6px;margin-bottom:0">공개 테스트(T.008) 진행 중 — 1강 구간부터 실측하며 이 계산기를 다시 붙여나갈 예정. 아래 다른 탭들은 전부 구버전(SCA 정식판) 공식 기준이므로, 신버전 수치를 다룰 땐 이 탭의 내용을 우선 참고하세요. <b>1강~44강을 "판매시 EXP를 얻는 구간"으로 묶어 별도의 신버전 효율 분석표(39강 이하/40~44강 분리, 상단 배치, 41~50강 탭은 45~50강 생산·보석 효율에 집중)를 새로 만드는 작업은 아래 데이터가 더 필요해 보류 중입니다 — 자세한 목록은 채팅 답변 참고.</b></p>
   </div>`;
   calcAwaken(); calcExpRange(); calcGemLookup();
 }
