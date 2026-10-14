@@ -72,6 +72,23 @@ th:first-child,td:first-child{text-align:left;font-family:inherit;}
 .al3 th{vertical-align:bottom;line-height:1.3;}
 .al3 th,.al3 td{padding-left:4px;padding-right:4px;}
 .effname{display:none;} @media (max-width:799px){ .al td.effname,.al th.effname{display:table-cell;width:26%;text-align:left;} }
+/* 56~59강 탭 맨 위 3단: 스탯(20%) · 보주 효율표(40%) · 시간당 생산량(40%) */
+.q59top{display:grid;grid-template-columns:minmax(0,22fr) minmax(0,46fr) minmax(0,32fr);gap:16px;align-items:start;}
+.q59t{display:table;table-layout:fixed;width:100%;border-collapse:collapse;margin-top:4px;}
+.q59t th,.q59t td{word-break:keep-all;padding:2px 4px;min-height:28px;font-size:.76rem;border-bottom:1px solid var(--border);vertical-align:middle;overflow:hidden;}
+.q59t th{font-size:.7rem;color:var(--sub);font-weight:600;line-height:1.2;text-align:right;vertical-align:bottom;}
+.q59t th:first-child{text-align:left;}
+.q59t td.n{text-align:left;font-family:inherit;line-height:1.2;}
+.q59t td.n small{display:block;color:var(--sub);font-size:.66rem;}
+.q59t td.v{font-family:var(--mono);white-space:nowrap;overflow:visible;}
+.q59t td.v small{color:var(--sub);font-size:.64rem;}
+.q59t input{height:24px;padding:0 4px;font-size:.8rem;text-align:right;}
+.q59t td.bar{position:relative;overflow:hidden;}
+.q59t td.bar i{position:absolute;left:0;top:3px;bottom:3px;background:var(--accent);opacity:.3;border-radius:2px;}
+.q59t td.bar i.best{opacity:.8;}
+.q59t td.bar span{position:relative;}
+.q59t tr.pg td{height:18px;min-height:0;padding:2px 4px 0;font-size:.68rem;color:var(--accent2);font-weight:600;border-bottom:1px solid var(--border);text-align:left;}
+.q59t tr.sp td{height:6px;min-height:0;padding:0;border-bottom:none;border-top:1px dashed var(--border);}
 /* 모든 탭 공통: 본문 폭 1300px 고정 (창이 좁으면 화면 전체 가로 스크롤, 넓으면 가운데 정렬). 위(제목·탭·공통입력줄)와 아래 본문을 같은 폭으로 맞춤 */
 body{ min-width:calc(1300px + 2*var(--side)); }
 header, nav, main{ width:calc(1300px + 2*var(--side)); max-width:none; min-width:0; }
@@ -668,7 +685,7 @@ const GEM_OPTIONS = [
 ];
 
 // ===================== 촉진·자판기·사냥터 생산 개수 데이터 =====================
-// 자판기 한쪽당 생산 개수 = baseUnitsPerSide(24) × 촉진값. 촉진값 = (1 + 3P-6 레벨×10 + 고유유닛 단수 + 8쪽) × 최종 유닛 생산량(증식·파멸·시간) × 촉진의 보석(마지막에 곱, 개당 +0.01배).
+// 자판기 한쪽당 생산 개수 = baseUnitsPerSide(24) × 촉진값. 촉진값 = (1 + 3P-6 레벨×10 + 고유유닛 단수 + 8쪽) × 최종 유닛 생산량(증식·파멸·시간) × 월륜의 보주 × 촉진의 보석(마지막에 곱, 개당 +0.01배).
 // 예) 3P-6 1레벨 → 촉진 11/11 → 한쪽당 24×11개. 촉진의 보석 30개 → 양쪽 모두 ×1.3.
 const VENDING_DATA = { baseUnitsPerSide: 24, perStatLevel: 10, gemFinalPerUnit: 0.01, gemMax: 30 };   // gemMax = 촉진의 보석 최대 개수
 let vendBoostOverride = null, vendGemOverride = null;
@@ -690,8 +707,16 @@ function sale5760Credit(){ return Math.round(10000 * (100 - Math.min(30, timeCry
 function finalProdMult(){ return 1 + 0.1 * Math.min(10, getQuasarLv('jeungsik')) + 0.1 * Math.min(30, getOriginLv('pamyul')) + 0.2 * timeCryLv(); }
 // 초월 8쪽 「자판기 1·2의 촉진량 +1,000/Lv」 ([56~59강 정보] 탭 입력 s81·s82). idx 생략 = 두 대 평균
 function exVendStat(idx){ return 1000 * (idx === 1 ? quasarStat.s81 : idx === 2 ? quasarStat.s82 : (quasarStat.s81 + quasarStat.s82) / 2); }
-// 촉진 계수 = floor(floor((3-6 · 고유유닛 단수 · 8쪽 합) × 최종 유닛 생산량 배수) × 촉진의 보석 배수) — 곱할 때마다 소수는 버린다(인게임 확인).
-function vendBoostOf(idx){ const b = vendBoost() + raceVendBonus(idx) + exVendStat(idx), m = finalProdMult(), g = vendGemMult(); const v = m === 1 ? b : Math.floor(b * m + 1e-9); return g === 1 ? v : Math.floor(v * g + 1e-9); }            // 자판기 idx(1|2)의 최종 촉진 계수
+// 월륜의 보주(최대 1개): 보유하면 최종 촉진 계수 ×(1 + 0.1 × 초월 레벨 자릿수) — 크리스탈 배수 뒤·촉진의 보석 앞에 따로 곱하고 내림(인게임 확인: EXLV 8자리 80%, 크리스탈 없음·증식 10 두 경우 자판기 1·2 값 일치)
+function moonOrbOwned(){ return (Number(exCalcState.orb.moon) || 0) >= 1 ? 1 : 0; }
+function moonVendMult(){ return moonOrbOwned() ? 1 + 0.1 * digitCount(exLevel) : 1; }
+function setMoonOrb(val){ exCalcState.orb.moon = (parseFloat(val) || 0) >= 1 ? 1 : 0; saveInvestmentState(); updateQuasar5759(); }
+// 인연의 보주(최대 1개): 옛 엑셀(DPS계산기 사용중)의 공식 — 보유하면 「LV.MAX 허수아비·허수광산 돈 수급 총 증가량」에 곱한다. 초월 레벨 자릿수 n번, 매번 ×1.15를 하고 소수 셋째 자리까지만 남김(내림). 인게임 미확인.
+function bondOrbOwned(){ return (Number(exCalcState.orb.bond) || 0) >= 1 ? 1 : 0; }
+function bondMoneyMult(){ if(!bondOrbOwned()) return 1; let a = 1000; for(let i = 0, n = digitCount(exLevel); i < n; i++) a = Math.floor(a * 115 / 100); return a / 1000; }
+function setBondOrb(val){ exCalcState.orb.bond = (parseFloat(val) || 0) >= 1 ? 1 : 0; saveInvestmentState(); updateQuasar5759(); }
+// 촉진 계수 = floor(floor(floor((3-6 · 고유유닛 단수 · 8쪽 합) × 최종 유닛 생산량 배수) × 월륜 배수) × 촉진의 보석 배수) — 곱할 때마다 소수는 버린다(인게임 확인).
+function vendBoostOf(idx){ const b = vendBoost() + raceVendBonus(idx) + exVendStat(idx), m = finalProdMult(), w = moonVendMult(), g = vendGemMult(); let v = m === 1 ? b : Math.floor(b * m + 1e-9); if(w !== 1) v = Math.floor(v * w + 1e-9); return g === 1 ? v : Math.floor(v * g + 1e-9); }            // 자판기 idx(1|2)의 최종 촉진 계수
 function vendUnitsPerSec(idx){ return VENDING_DATA.baseUnitsPerSide * vendBoostOf(idx) * speedMult(); } // 자판기 한 대의 초당 생산 개수 (idx 생략 = 두 대 평균)
 function withVendBoost(v, fn){ const o=vendBoostOverride; vendBoostOverride=v; try{ return fn(); } finally{ vendBoostOverride=o; } }
 function vendingBoost(lv36, gems){ return Math.floor((1 + VENDING_DATA.perStatLevel*lv36) * (1 + VENDING_DATA.gemFinalPerUnit * gems) + 1e-9); }   // 예시 표용: 3P-6 몫에 보석 최종 배수
@@ -1390,9 +1415,16 @@ const PR_FI = (() => {
   add(2.5e21, '약 25해', 7000000, {}, { ver: '화면 목록 (지급 미확인)' });
   add(6e21, '약 60해', 8000000, {}, { ver: '화면 목록 (지급 미확인)' });
   add(1.5e22, '약 150해', 9000000, {}, { ver: '화면 목록 (지급 미확인)' });
+  add(4.5e22, '약 450해', 10000000, {}, { ver: '화면 목록 (지급 미확인)' });
+  add(9e22, '약 900해', 11000000, {}, { ver: '화면 목록 (지급 미확인)' });
+  add(1.5e23, '약 1,500해', 12000000, {}, { ver: '화면 목록 (지급 미확인)' });
+  add(3.2e23, '약 3,200해', 13000000, {}, { ver: '화면 목록 (지급 미확인)' });
+  add(5e23, '약 5,000해', 14000000, {}, { ver: '화면 목록 (지급 미확인)' });
+  add(7.5e23, '약 7,500해', 15000000, {}, { ver: '화면 목록 (지급 미확인)' });
+  add(1e24, '약 1자', 16000000, {}, { ver: '화면 목록 (지급 미확인) · 마지막 줄' });
   return L;
 })();
-// 해 묶음 나머지 6줄(약 150해 위 ~ 약 7,500해) · 자 묶음은 데이터 없음 — 아래 시트 맨 끝에 「확인 전」으로 표시한다.
+// 엑보 보상 목록은 약 1자(10^24)가 마지막 줄이다(사용자 확인 2026-10-12, 해 묶음 13줄 + 자 1줄 화면 목록 전부 확인). 줄마다 ExPoint +1,000,000.
 
 let perRun = { lv: 56, boss: 10, mineDps: 0, bossDps: 0, fiLv: 59, fiD: 0, fiCool: 0, smash: null, dolpa: null, minutes: 60, ms: 14, hotOn: true, hotStart: 0, mirae: null, chang: null, changMode: 'add' };
 // 50강 이하 엑보 유닛의 24프레임(게임 시계 1초)당 타수 — 시뮬 정리 기록(영상 2026-10-06 ±3%: 36·40·48·49·50강)
@@ -1580,14 +1612,13 @@ function renderPerRun(){
   </div>
   <div class="result" style="margin-top:14px">
     <b>[6] 엑스트라 보스(FI) 줄 — 도달 시간과 보상 (판 시작부터 서 있고, 누적 타수가 쌓일수록 줄을 넘김)</b>
-    <table style="margin-top:8px"><tr><th>줄</th><th>누적 타수</th><th>도달 시간(게임 시계)</th><th>ExPoint</th><th>크레딧</th><th>아이템</th><th>확인 정도</th></tr>${fiRows}
-      <tr style="opacity:.45"><td>약 150해 위 ~ 약 7,500해(해 묶음 6줄) · 자 묶음</td><td>-</td><td>-</td><td>?</td><td>?</td><td style="text-align:left">데이터 없음</td><td style="text-align:left;font-size:.72rem">확인 전</td></tr></table>
+    <table style="margin-top:8px"><tr><th>줄</th><th>누적 타수</th><th>도달 시간(게임 시계)</th><th>ExPoint</th><th>크레딧</th><th>아이템</th><th>확인 정도</th></tr>${fiRows}</table>
     <p class="note" style="margin-top:6px;margin-bottom:0">시간은 위 입력의 초당 타수로 계산한 값입니다(실제는 DPS 상승으로 더 짧음). 5,000 · 25,000줄은 ExPoint = 기본 × 최종 배수 + 후원 몫(LV.6~11 +5,000 / +20,000 · LV.12~ +10,000 / +30,000) × 미래/창조 × 핫타임, 나머지 줄은 기본 × 최종 배수 × 미래/창조 × 핫타임입니다. 정식 출시 뒤에는 하루마다 한 묶음씩 열립니다.</p>
   </div>
   <div class="result" style="margin-top:14px;background:rgba(255,200,60,0.07)">
     <b>[7] 아직 없거나 애매한 데이터</b>
     <ul style="margin:6px 0 0 18px;font-size:.8rem;line-height:1.55">
-      <li>엑보 <b>약 150해 위 줄</b>(해 묶음 6줄 · 자 묶음)의 보상과 문턱 — 화면에서 아직 못 봄. 약 100경 이상 줄의 <b>지급 실측</b>도 없음(목록 표기만).</li>
+      <li>엑보 줄 목록은 <b>약 1자가 마지막 줄</b>로 모두 확인됐습니다. 다만 약 100경 이상 줄의 <b>지급 실측</b>은 없음(목록 표기만).</li>
       <li>5,000 · 25,000줄에서 <b>미래/창조가 후원 몫에도 곱해지는지</b>(25,000줄은 미래 없이 85,000만 실측).</li>
       <li>퀘이사 상자가 크리스탈 대신 상급 조각으로 바뀌는 비율(합계표는 상자 개수만 셈).</li>
       <li>엑보 ExPoint 후원 몫(5,000줄 LV.6 +5,000 · LV.12 +1만 / 25,000줄 +2만 · +3만)은 후원 특전 표와 공지 값이다. 직접 측정은 25,000줄 LV.20(핫타임 85,000)뿐이라 다른 후원 단계와 5,000줄은 표 값 기준이다.</li>
@@ -1695,8 +1726,8 @@ function crystalUpgrade5156(){ return 2 * (cryLv('c4') + cryLv('c12') + cryLv('c
 // 51~59강 표기 공격력 D = 기본 × 진 각성 × (1 + 신위 100%/개) × (1 + 창조 20%/Lv, 51·54~59강 확인) × (10 + 공업) / 10.
 //   공업: 51~56강 = 초월 6쪽 개별 공업 + 크리스탈 업그레이드, 57~59강 = 무구 8/Lv + 멀티 보너스 3 + 힘·지위·권력 1/개(그 강 전용; 10% = 공업 1) (6쪽에 57~59강 공업 스탯은 없고, 크리스탈 업그레이드 +X는 「51~56강」 한정).
 //   인게임 확인(2026-10-09): 57강 힘의 보주 1개 → 정보창 150만+60만(= 1.5M × (10+3+1)/10), 신위 1 + 힘 1 → 300만+120만(= 1.5M × 2 × 1.4), L창 6쪽 「추가 공업」 57강 12 = 멀티 3 + 무구 1Lv 8 + 힘 1, 58·59강 11 = 3 + 8. 신위는 기본 공격력에 곱해지고 힘·지위·권력·무구·멀티는 공업 칸에서 합산. 창조(20%/Lv)는 신위와 곱연산으로 확인(2026-10-10: 신위 1000 + 힘 1 + 무구 1 상태의 57강 15억150만+18억180만 → 창조 (+1) 장착 후 18억180만+21억6216만, 기본 ×1.2 · 인게임 표기 (+N) = N레벨 효과, (+0)은 장착 불가).
-const ORB_MAX = { high:100, fate:2000, save:1500, special:500, premium:1000, nebula:2000, heaven:2000, void:100, power:500, status:500, might:500, divine:1000, mine:100, crit:500 };
-const ORB_GEM_KEY = { high:'orb_high', fate:'orb_fate', save:'orb_save', special:'orb_special', premium:'orb_premium', nebula:'orb_nebula', heaven:'orb_heaven', void:'orb_void', power:'orb_power', status:'orb_status', might:'orb_might', divine:'orb_divine', mine:'orb_mine', crit:'orb_crit' };
+const ORB_MAX = { low:100, mid:100, eon:1000, glut:1000, exp:1000, high:100, fate:2000, save:1500, special:500, premium:1000, nebula:2000, heaven:2000, void:100, power:500, status:500, might:500, divine:1000, mine:100, crit:500 };
+const ORB_GEM_KEY = { low:'orb_low', mid:'orb_mid', eon:'orb_eon', glut:'orb_glut', exp:'orb_exp', high:'orb_high', fate:'orb_fate', save:'orb_save', special:'orb_special', premium:'orb_premium', nebula:'orb_nebula', heaven:'orb_heaven', void:'orb_void', power:'orb_power', status:'orb_status', might:'orb_might', divine:'orb_divine', mine:'orb_mine', crit:'orb_crit' };
 const ORB_FUS_KEYS = ['high', 'fate', 'save'];   // 56강 융합 보주는 exCalcState.fus에, 나머지는 exCalcState.orb에 보관
 function getOrb(k, ov){
   const v = ov && ov[k] !== undefined ? ov[k] : (ORB_FUS_KEYS.includes(k) ? exCalcState.fus[k] : exCalcState.orb[k]);
@@ -1936,7 +1967,7 @@ function computeProductionN40(invOverride){
   // LV.MAX·허수광산은 1P-1 → 재물 → 각성 순으로 곱하며 정수 %로 내린 배수(실측), LV.1/LV.2는 1P-1 × 각성 그대로(재물·폭식 안 붙음)
   // 재물 보석 수: [44~50강] 탭이 넘기는 _wealth = 1 + 보석 수 × 10%에서 복원, 없으면 보유 재물(사냥터 소득 계산기 [2]와 같은 값)
   const wealthGems = (invOverride._wealth !== undefined) ? Math.round((invOverride._wealth - 1) * 10) : getGemInv('wealth');
-  const moneyMaxMineMult = moneyPctMult(inv('inv_1_1'), wealthGems, 0, effectiveAwakenLevel(), trueAwakenLevel);
+  const moneyMaxMineMult = moneyPctMult(inv('inv_1_1'), wealthGems, getOrb('glut'), effectiveAwakenLevel(), trueAwakenLevel);
   const moneyPerSec = ((dpsLv1*infoLv1.mult + dpsLv2*infoLv2.mult*100000) * moneyStatMult + (dpsMax*1e10 + mineTick) * moneyMaxMineMult) * speedMult(); // LV.MAX: DPS 배수 보너스 없이 DPS×100억
 
   // 3P-6(자판기 촉진량) 가상 투자값이 넘어오면, 그 레벨 차이만큼 촉진값(자판기 생산 속도)을 바꿔서 계산한다.
@@ -3106,8 +3137,8 @@ function exCalc(ov, n50, feed){
   p[51] = EX_BASE_PROB[51] + st('5_2') * 0.1 + gil + multi;
   p[52] = EX_BASE_PROB[52] + st('5_3') * 0.1 + gil + multi;
   p[53] = EX_BASE_PROB[53] + st('5_4') * 0.1 + gil + multi;
-  p[54] = EX_BASE_PROB[54] + st('5_5') * 0.01 + st('7_1') * 0.05 + ujuHi + multi;
-  p[55] = EX_BASE_PROB[55] + st('5_6') * 0.01 + st('7_2') * 0.02 + ujuHi + multi;
+  p[54] = EX_BASE_PROB[54] + st('5_5') * 0.01 + st('7_1') * 0.05 + ujuHi + multi + 0.1 * getOrb('low') + 0.03 * getOrb('eon');   // 하급 보주 54강 +0.1%p/개 · 영겁의 보주 54~55강 +0.03%p/개 (보주 1·2쪽)
+  p[55] = EX_BASE_PROB[55] + st('5_6') * 0.01 + st('7_2') * 0.02 + ujuHi + multi + 0.1 * getOrb('mid') + 0.03 * getOrb('eon');   // 중급 보주 55강 +0.1%p/개
   for(let k = 51; k <= 55; k++) p[k] = Math.min(100, p[k]);
   const q = k => p[k] / 100;
   const fd = k => (feed && feed[k]) || 0;   // feed: 자판기가 51~54강을 바로 사는 분(시간당) — 그 강의 도달 수에 더한다
@@ -3634,7 +3665,7 @@ function calcHuntIncome() {
   const moneyLv1PerSec = totalDpsLv1 * infoLv1.mult * moneyStatMult * speedMult();
   const moneyLv2PerSec = totalDpsLv2 * infoLv2.mult * 100000 * moneyStatMult * speedMult(); // LV.2 사냥터 기본보상 ×10만
   const wealthGems = getGemInv('wealth');
-  const moneyMaxMineMult = moneyPctMult(getStatInv(1,1), wealthGems, 0, effectiveAwakenLevel(), trueAwakenLevel); // LV.MAX·허수광산: 1P-1 → 재물 → 각성을 곱할 때마다 정수 %로 내린 배수(실측). 폭식의 보주는 입력칸이 없어 0으로 둠
+  const moneyMaxMineMult = moneyPctMult(getStatInv(1,1), wealthGems, getOrb('glut'), effectiveAwakenLevel(), trueAwakenLevel); // LV.MAX·허수광산: 1P-1 → 재물 → 각성을 곱할 때마다 정수 %로 내린 배수(실측). 폭식의 보주는 [56~59강 정보] 탭 보주 입력
   const moneyMaxPerSec = totalDpsMax * 1e10 * moneyMaxMineMult * speedMult(); // LV.MAX 사냥터: DPS 구간 배수 없이 DPS×100억
   const moneyMinePerSec = hc.mineTick * moneyMaxMineMult * speedMult();      // 51~56강 허수광산: 1.179×10¹⁵ × (M + 2D) 공식
   const moneyEarnedPerSec = moneyLv1PerSec + moneyLv2PerSec + moneyMaxPerSec + moneyMinePerSec;
@@ -3769,6 +3800,7 @@ const ORB_5759 = {
 };
 
 // ---- 입력 처리: 값은 모두 저장 상태(exCalcState · quasarStat · quasarLevels · originLevels)에 넣고 결과만 다시 그린다 ----
+function setExpOrb(val){ exCalcState.orbExp = Math.max(0, Math.min(1000, Math.floor(parseFloat(val) || 0))); saveInvestmentState(); updateQuasar5759(); }
 function setQOrb(k, val){
   const v = Math.max(0, Math.min(ORB_MAX[k], Math.floor(parseFloat(val) || 0)));
   if(ORB_FUS_KEYS.includes(k)) exCalcState.fus[k] = v; else exCalcState.orb[k] = v;
@@ -3917,11 +3949,73 @@ function q59AtkRecs(){
   return rows.sort((a, b) => (a.max ? 1 : 0) - (b.max ? 1 : 0) || a.per - b.per);
 }
 
+// 초월 스탯 확률 3종(7쪽-3·4·5): 1레벨 더 찍었을 때 목표 강 도달 증가와 1% 올리는 데 드는 포인트
+function q59StatRecs(goal){
+  const base = quasarYield({})[goal];
+  return [['stat73', 250, 100], ['s57', 2000, 100], ['s58', 3000, 100]].map(([k, pt, mx]) => {
+    const obj = k === 'stat73' ? exCalcState.fus : quasarStat, keep = obj[k], own = Number(keep) || 0;
+    if(own >= mx) return { k, max: true };
+    let y1;
+    try{ obj[k] = own + 1; y1 = quasarYield({})[goal]; } finally { obj[k] = keep; }
+    const gain = base > 0 ? y1 / base - 1 : 0;
+    return { k, gain, per: gain > 0 ? pt / (gain * 100) : Infinity };
+  });
+}
+// 맨 위 표의 효율 칸을 채운다(입력칸은 건드리지 않아 타이핑 중에도 포커스가 유지됨)
+function q59UpdateTop(){
+  const goal = exCalcState.recGoal, cells = id => { const r = document.getElementById(id); return r ? r.querySelectorAll('td') : null; };
+  // 막대: 같은 묶음에서 가장 싼 것(= 효율 최고)을 100%로 두고, 비용이 10배 커질 때마다 6분의 1씩 짧아진다(로그 눈금 — 값 차이가 수백만 배라 선형이면 막대가 안 보임). 진한 막대 = 최고
+  const bar = (txt, best, per) => `<i class="${per === best ? 'best' : ''}" style="width:${Math.max(4, 100 * (1 - Math.log10(per / best) / 6)).toFixed(1)}%"></i><span>${txt}</span>`;
+  const minPer = rs => rs.filter(r => !r.max && isFinite(r.per)).reduce((m, r) => Math.min(m, r.per), Infinity);
+  const put = (id, a, b, c) => { const x = cells(id); if(!x) return; x[2].innerHTML = a; if(b !== null) x[3].innerHTML = b; if(c !== null) x[4].innerHTML = c; };
+  const gainTxt = r => r.gain > 0 ? '+' + q59Pct(r.gain) : '-';
+  // 확률·융합 보주 (목표 강 도달)
+  const pr = q59ProbRecs(goal), prMap = {}, mp = minPer(pr); pr.forEach(r => prMap[r.k] = r);
+  ['high', 'fate', 'save', 'special', 'nebula', 'premium', 'heaven', 'void'].forEach(k => {
+    const r = prMap[k], own = getOrb(k);
+    if(!r) put('q59o_' + k, own >= ORB_MAX[k] ? '최대' : q59Big(gemNextCost(ORB_GEM_KEY[k], own)), '-', '-');   // 목표 강보다 위 강에서만 쓰이는 보주: 다음 비용만
+    else if(r.max) put('q59o_' + k, '최대', '-', '-');
+    else put('q59o_' + k, q59Big(r.cost), gainTxt(r), isFinite(r.per) ? bar(q59Big(r.per), mp, r.per) : '-');
+  });
+  // 공격력 보주 (신위는 57·58·59강 중 가장 싼 줄)
+  const ar = q59AtkRecs(), atkBest = {};
+  ar.forEach(r => { if(!atkBest[r.k] || (!r.max && (atkBest[r.k].max || r.per < atkBest[r.k].per))) atkBest[r.k] = r; });
+  const ma = minPer(Object.keys(atkBest).map(k => atkBest[k]));
+  ['power', 'status', 'might', 'divine'].forEach(k => {
+    const r = atkBest[k], lv = r && r.lv ? ` <small>${r.lv}강</small>` : '';
+    if(!r) put('q59o_' + k, '-', '-', '-');
+    else if(r.max) put('q59o_' + k, '최대', '-', '-');
+    else put('q59o_' + k, q59Big(r.cost), gainTxt(r) + (k === 'divine' ? lv : ''), isFinite(r.per) ? bar(q59Big(r.per), ma, r.per) : '-');
+  });
+  // 하급·중급·영겁(54~55강)·경험·폭식·채광·절명: 효율 기준(목표 강 도달 · 공격력 D)이 없어 다음 비용만
+  ['low', 'mid', 'eon', 'exp', 'glut', 'mine', 'crit'].forEach(k => { const own = k === 'exp' ? Math.min(1000, Math.floor(exCalcState.orbExp || 0)) : getOrb(k); put('q59o_' + k, own >= ORB_MAX[k] ? '최대' : q59Big(gemNextCost(ORB_GEM_KEY[k], own)), '-', '-'); });
+  // 초월 스탯 확률 3종 + 나머지 스탯은 「-」
+  const sr = q59StatRecs(goal), ms = minPer(sr);
+  ['stat73', 's57', 's58', 's76', 's81', 's82', 's83'].forEach(k => {
+    const x = cells('q59s_' + k); if(!x) return;
+    const r = sr.find(z => z.k === k);
+    x[2].innerHTML = !r ? '-' : r.max ? '최대' : isFinite(r.per) ? bar(Math.round(r.per).toLocaleString(), ms, r.per) : '-';
+  });
+}
+
 function renderQuasar5759(){
   const fld = (label, sub, value, max, handler) => `<div class="field"><label>${label} <span style="opacity:.75">${sub}</span></label><input type="number" min="0" max="${max}" step="1" value="${value}" oninput="${handler}"></div>`;
-  const orbDef = { high:'상급 보주', fate:'명운의 보주', save:'절약의 보주', special:'특급 보주', nebula:'성운의 보주', premium:'고급 보주', heaven:'천운의 보주', void:'무위의 보주', power:'힘의 보주', status:'지위의 보주', might:'권력의 보주', divine:'신위의 보주', mine:'채광의 보주', crit:'절명의 보주' };
-  const orbEff = { high:'융합 +0.05%p', fate:'융합 +0.02%p', save:'필요 −10마리', special:'57강 +0.02%p', nebula:'57강 +0.02%p', premium:'58강 +0.01%p', heaven:'58강 +0.02%p', void:'59강 +0.001%p', power:'57강 공격력 +10%', status:'58강 공격력 +10%', might:'59강 공격력 +10%', divine:'51~59강 기본공격력 +100%', mine:'광산 크레딧 ×1.1/개', crit:'크리티컬 확률 +0.1%p/개' };
-  const orbFields = Object.keys(orbDef).map(k => fld(orbDef[k], `(${orbEff[k]} · 최대 ${ORB_MAX[k].toLocaleString()})`, getOrb(k), ORB_MAX[k], `setQOrb('${k}',this.value)`)).join('');
+  const orbDef = { low:'하급 보주', mid:'중급 보주', high:'상급 보주', special:'특급 보주', premium:'고급 보주', exp:'경험의 보주', save:'절약의 보주', power:'힘의 보주', status:'지위의 보주', might:'권력의 보주', mine:'채광의 보주', divine:'신위의 보주', crit:'절명의 보주', glut:'폭식의 보주', eon:'영겁의 보주', fate:'명운의 보주', nebula:'성운의 보주', heaven:'천운의 보주', void:'무위의 보주' };
+  const orbEff = { low:'54강 +0.1%p', mid:'55강 +0.1%p', high:'융합 +0.05%p', special:'57강 +0.02%p', premium:'58강 +0.01%p', exp:'초월 경험치 +100%', save:'필요 −10마리', power:'57강 공격력 +10%', status:'58강 공격력 +10%', might:'59강 공격력 +10%', mine:'광산 크레딧 ×1.1/개', divine:'51~59강 기본공격력 +100%', crit:'크리티컬 확률 +0.1%p/개', glut:'허수 돈 +0.1배/개', eon:'54~55강 +0.03%p', fate:'융합 +0.02%p', nebula:'57강 +0.02%p', heaven:'58강 +0.02%p', void:'59강 +0.001%p' };
+  // 인게임 보주 3페이지(보주 1쪽)·4페이지(보주 2쪽) 순서: 왼쪽 위→아래, 그다음 오른쪽 위→아래 (4페이지 왼쪽 4번은 빈 항목)
+  const orbPages = [['3페이지 (보주 1쪽)', ['low', 'mid', 'high', 'special', 'premium', 'exp', 'save', 'power', 'status', 'might']], ['4페이지 (보주 2쪽)', ['mine', 'divine', 'crit', 'glut', 'eon', 'fate', 'nebula', 'heaven', 'void']]];
+  const orbVal = k => k === 'exp' ? Math.min(1000, Math.floor(exCalcState.orbExp || 0)) : getOrb(k), orbHandler = k => k === 'exp' ? `setExpOrb(this.value)` : `setQOrb('${k}',this.value)`;
+  const orbRows = orbPages.map(pg => `<tr class="pg"><td colspan="5">${pg[0]}</td></tr>` + pg[1].map(k => `<tr id="q59o_${k}"><td class="n">${orbDef[k]}<small>${orbEff[k]} · 최대 ${ORB_MAX[k].toLocaleString()}</small></td><td><input type="number" min="0" max="${ORB_MAX[k]}" step="1" value="${orbVal(k)}" oninput="${orbHandler(k)}"></td><td class="v">-</td><td class="v">-</td><td class="v bar">-</td></tr>`).join('')).join('');
+  const statDefs = [
+    ['stat73', '7-3 융합확률', '+0.1%p · 최대 100', 100, `setFusIn('stat73',this.value,100)`, exCalcState.fus.stat73 || 0],
+    ['s57', '7-4 57강 확률', '+0.1%p · 최대 100', 100, `setQStat('s57',this.value)`, quasarStat.s57],
+    ['s58', '7-5 58강 확률', '+0.1%p · 최대 100', 100, `setQStat('s58',this.value)`, quasarStat.s58],
+    ['s76', '7-6 응무조 획득', '+1%p · 최대 200', 200, `setQStat('s76',this.value)`, quasarStat.s76],
+    ['s81', '8-1 자판기1 촉진', '+1,000 · 최대 4만', 40000, `setQStat('s81',this.value)`, quasarStat.s81],
+    ['s82', '8-2 자판기2 촉진', '+1,000 · 최대 4만', 40000, `setQStat('s82',this.value)`, quasarStat.s82],
+    ['s83', '8-3 광산 크레딧', '+1%p · 최대 200', 200, `setQStat('s83',this.value)`, quasarStat.s83],
+  ];
+  const statRows = statDefs.map(d => `<tr id="q59s_${d[0]}"><td class="n">${d[1]}<small>${d[2]}</small></td><td><input type="number" min="0" max="${d[3]}" step="1" value="${d[5]}" oninput="${d[4]}"></td><td class="v bar">-</td></tr>`).join('');
   const crystalRows = QUASAR_CRYSTALS.map(c => `<tr>
     <td title="${c.note}">${c.name}</td>
     <td><input type="number" value="${getQuasarLv(c.key)}" min="0" max="${c.max}" style="width:64px;padding:4px 6px" oninput="setQCry('quasar','${c.key}',this.value,${c.max})"></td>
@@ -3935,38 +4029,33 @@ function renderQuasar5759(){
   const sub = 'style="font-size:.8rem;font-weight:600;margin:12px 0 4px"';
 
   host.innerHTML = `
-  <div class="split-layout">
-    <div class="split-left"><div class="result" style="margin-top:0;border-top:none;padding-top:0">
-      <b>입력 — 초월 스탯 · 보주 · 크리스탈</b>
-      <p class="note" style="margin-top:2px;margin-bottom:0">여기에 적은 값은 브라우저에 저장되고, 아래 결과·오른쪽 보주 추천·[스펙 요약]이 같이 읽습니다.</p>
-      <div ${sub}>초월 스탯 (7쪽)</div>
-      <div class="grid">
-        ${fld('7쪽-3 융합확률', '(+0.1%p/Lv · 비용 25,000 · 최대 100)', exCalcState.fus.stat73 || 0, 100, `setFusIn('stat73',this.value,100)`)}
-        ${fld('7쪽-4 57강 확률', '(+0.1%p/Lv · 비용 2,000 · 최대 100)', quasarStat.s57, 100, `setQStat('s57',this.value)`)}
-        ${fld('7쪽-5 58강 확률', '(+0.1%p/Lv · 비용 3,000 · 최대 100)', quasarStat.s58, 100, `setQStat('s58',this.value)`)}
-        ${fld('7쪽-6 응축된 무색 조각 획득량', '(+1%p/Lv · 비용 100,000 · 최대 200)', quasarStat.s76, 200, `setQStat('s76',this.value)`)}
-      </div>
-      <div ${sub}>초월 스탯 (8쪽 — 자판기 촉진 · 광산 크레딧)</div>
-      <div class="grid">
-        ${fld('8쪽-1 자판기 1 촉진량', '(+1,000/Lv · 비용 2,000,000,000 · 최대 40,000)', quasarStat.s81, 40000, `setQStat('s81',this.value)`)}
-        ${fld('8쪽-2 자판기 2 촉진량', '(+1,000/Lv · 비용 2,000,000,000 · 최대 40,000)', quasarStat.s82, 40000, `setQStat('s82',this.value)`)}
-        ${fld('8쪽-3 광산 크레딧 채취 효율', '(+1%p/회 · 1회 20,000 · 최대 200 · 51~59강 크레딧 채취효율 %에 반영)', quasarStat.s83, 200, `setQStat('s83',this.value)`)}
-      </div>
-      <div id="q59pts" class="note" style="margin:6px 0 0"></div>
-      <div ${sub}>보주 (응축된 무색 조각으로만 구입 — 57~59강 유닛 판매로 얻음)</div>
-      <div class="grid">${orbFields}</div>
-      <div ${sub}>퀘이사 등급 크리스탈 (인게임 도움말 부록 4.50 기준)</div>
-      <table><tr><th>크리스탈</th><th>Lv</th><th>효과</th></tr>${crystalRows}</table>
-      <div ${sub}>오리진 등급 크리스탈 (파이널 버전)</div>
-      <table><tr><th>크리스탈</th><th>Lv</th><th>효과 (레벨당)</th></tr>${originRows}</table>
-    </div></div>
-    <div class="split-right"><div class="result" style="margin-top:0;border-top:none;padding-top:0">
-      <b>보주 추천</b>
-      <p class="note" style="margin-top:2px;margin-bottom:6px">「다음 1개」를 샀을 때 늘어나는 비율과 비용으로, <b>목표 강의 56강 1마리당 도달을 1% 늘리는 데 드는 응축된 무색 조각</b>이 적은 순서입니다(위쪽이 먼저 살 것). 아래 현재 입력 기준이라 보주를 사면 순서가 바뀝니다.</p>
-      <div class="field" style="max-width:260px"><label>목표 (시간당 도달을 늘릴 강)</label>
-        <select onchange="setRecGoal(this.value)">${[57, 58, 59, 60].map(g => `<option value="${g}"${exCalcState.recGoal === g ? ' selected' : ''}>${g}강</option>`).join('')}</select></div>
-      <div id="q59rec" style="margin-top:8px"></div>
-    </div></div>
+  <div class="q59top">
+    <div>
+      <b style="font-size:.85rem">초월 스탯 (7 · 8쪽)</b>
+      <table class="q59t"><colgroup><col style="width:42%"><col style="width:32%"><col style="width:26%"></colgroup>
+        <tr><th>스탯</th><th>Lv</th><th>1%당 pt</th></tr>${statRows}</table>
+      <div id="q59pts" class="note" style="margin:6px 0 0;font-size:.7rem"></div>
+      <p class="note" style="margin:4px 0 0;font-size:.68rem">1%당 pt = 목표 강 도달을 1% 늘리는 포인트(막대가 길수록 효율 좋음, 로그 눈금). 확률 스탯만 계산.</p>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:.85rem">보주 — 보유 · 효율</b>
+        <label style="display:flex;align-items:center;gap:4px;white-space:nowrap;margin:0">목표 도달 강 <select style="width:auto;padding:2px 6px;font-size:.8rem" onchange="setRecGoal(this.value)">${[57, 58, 59, 60].map(g => `<option value="${g}"${exCalcState.recGoal === g ? ' selected' : ''}>${g}강</option>`).join('')}</select></label></div>
+      <table class="q59t"><colgroup><col style="width:34%"><col style="width:16%"><col style="width:17%"><col style="width:15%"><col style="width:18%"></colgroup>
+        <tr><th>보주</th><th>보유</th><th>다음 비용</th><th>증가</th><th>1% 비용</th></tr>${orbRows}</table>
+      <p class="note" style="margin:4px 0 0;font-size:.68rem">막대가 길고 진할수록 효율이 좋습니다(확률 보주 · 공격력 보주 각각 가장 싼 것 = 꽉 찬 진한 막대, 비용이 10배 커질 때마다 6분의 1씩 짧아지는 로그 눈금). 증가 = 목표 강의 56강 1마리당 도달 / 공격력 D 증가율, 1% 비용 = 그 증가를 1% 늘리는 응축된 무색 조각(만·억·조·경·해·자). 인게임 3·4페이지 순서와 같습니다. 하급·중급·영겁(54~55강)·경험·폭식·채광·절명은 효율 계산 기준이 없어 다음 비용만 보입니다. 응무조는 57~59강 유닛 판매로만 얻고, 보주를 사면 막대가 바뀝니다.</p>
+    </div>
+    <div id="q59prod"></div>
+  </div>
+
+  <div class="result" style="margin-top:14px">
+    <b>입력 — 월륜 · 인연 · 퀘이사/오리진 크리스탈</b>
+    <p class="note" style="margin-top:2px;margin-bottom:0">위 스탯·보주와 같이 브라우저에 저장되고, 아래 결과·[스펙 요약]이 같이 읽습니다.</p>
+    <div ${sub}>월륜 · 인연의 보주</div>
+    <div class="grid">${fld('월륜의 보주', `(최종 촉진 +10% × 초월 레벨 자릿수, 지금 ×${(1 + 0.1 * digitCount(exLevel)).toFixed(1)} · 최대 1)`, moonOrbOwned(), 1, `setMoonOrb(this.value)`)}${fld('인연의 보주', `(돈 수급 총 증가량 ×1.15를 초월 레벨 자릿수만큼 거듭 곱함, 지금 ×${(function(){ let a = 1000; for(let i = 0, n = digitCount(exLevel); i < n; i++) a = Math.floor(a * 115 / 100); return a / 1000; })()} · 최대 1 · 옛 엑셀 공식, 인게임 미확인)`, bondOrbOwned(), 1, `setBondOrb(this.value)`)}</div>
+    <div ${sub}>퀘이사 등급 크리스탈 (인게임 도움말 부록 4.50 기준)</div>
+    <table><tr><th>크리스탈</th><th>Lv</th><th>효과</th></tr>${crystalRows}</table>
+    <div ${sub}>오리진 등급 크리스탈 (파이널 버전)</div>
+    <table><tr><th>크리스탈</th><th>Lv</th><th>효과 (레벨당)</th></tr>${originRows}</table>
   </div>
 
   <div id="q59out" style="margin-top:20px"></div>
@@ -4039,18 +4128,20 @@ function updateQuasar5759(){
     const tot = exLevel * 30, left = tot - all;
     pts.innerHTML = `이 탭에서 쓴 초월 스탯 포인트 <b>${used.toLocaleString()}</b> (7쪽-3·4·5·6 + 8쪽) · 5·6·7쪽-1·2(50~56강 탭 입력)까지 합쳐 <b>${all.toLocaleString()}</b> / 총 ${tot.toLocaleString()}(초월 레벨 ${exLevel.toLocaleString()} × 30) → 남은 <b style="color:${left < 0 ? 'var(--danger)' : 'var(--accent2)'}">${left.toLocaleString()}</b>`;
   }
-  // 보주 추천 (오른쪽)
-  const rec = document.getElementById('q59rec');
-  if(rec){
-    const goal = exCalcState.recGoal, tr = (r, first, extra) => r.max
-      ? `<tr><td ${L}>${r.name}${extra || ''}</td><td>${r.own.toLocaleString()} (최대)</td><td>-</td><td>-</td><td>-</td></tr>`
-      : `<tr${first ? ' style="background:rgba(80,200,140,.14)"' : ''}><td ${L}>${first ? '<b>' : ''}${r.name}${extra || ''}${first ? '</b>' : ''}</td><td>${r.own.toLocaleString()}</td><td>${q59Big(r.cost)}</td><td>+${q59Pct(r.gain)}</td><td><b>${isFinite(r.per) ? q59Big(r.per) : '-'}</b></td></tr>`;
-    const pr = q59ProbRecs(goal), ar = q59AtkRecs();
-    const lvTxt = lv => ` <span style="color:var(--sub);font-size:.74rem">(${lv}강)</span>`;
-    rec.innerHTML = `
-      <table><tr><th ${L}>보주 (${goal}강 도달)</th><th>보유</th><th>다음 1개 비용</th><th>도달 증가</th><th>1% 늘리는 비용</th></tr>${pr.map((r, i) => tr(r, i === 0 && !r.max, ` <span style="color:var(--sub);font-size:.74rem">${r.eff}</span>`)).join('')}</table>
-      <table style="margin-top:10px"><tr><th ${L}>공격력 보주</th><th>보유</th><th>다음 1개 비용</th><th>D 증가</th><th>1% 올리는 비용</th></tr>${ar.map((r, i) => tr(r, i === 0 && !r.max, lvTxt(r.lv))).join('')}</table>
-      <p class="note" style="margin:6px 0 0;font-size:.74rem">비용 단위는 응축된 무색 조각(만·억·조·경·해·자). 신위의 보주는 51~59강 전부에 붙어서 57·58·59강 줄이 따로 나옵니다. 공격력 쪽은 합·곱 가정(아래 [B])에 따라 증가율이 달라집니다.</p>`;
+  // 맨 위 3단: 보주·스탯 효율 칸 채우기 + 시간당 생산량 표
+  q59UpdateTop();
+  const prod = document.getElementById('q59prod');
+  if(prod){
+    const prodRows = [57, 58, 59, 60].map(lv => {
+      const p = lv === 57 ? fp.p : pq.p[lv - 1], sold = lv <= 59 ? q59Big(n56 * y[lv] * per[lv] * cp / 100) : '-';
+      return `<tr><td class="n">${lv}강${lv === 57 ? '<small>56강 융합</small>' : ''}</td><td class="v">${num(p, 4)}%</td><td class="v"><b>${f(n56 * y[lv])}</b></td><td class="v">${hours(lv)}</td><td class="v">${sold}</td></tr>`;
+    }).join('');
+    prod.innerHTML = `
+      <b style="font-size:.85rem">시간당 57~60강 생산량</b>
+      <div class="note" style="margin:2px 0 0;font-size:.72rem">시간당 56강 <b>${f(n56)}</b>마리 · 융합 1회 = 56강 <b>${need0(y)}</b>마리 · 만든 유닛을 팔지 않고 다음 강화에 전부 쓸 때의 기댓값</div>
+      <table class="q59t"><colgroup><col style="width:16%"><col style="width:17%"><col style="width:23%"><col style="width:20%"><col style="width:24%"></colgroup>
+        <tr><th>강</th><th>확률</th><th>시간당 도달</th><th>1기 시간</th><th>전부 판매 시 응무조/시간</th></tr>${prodRows}</table>
+      <p class="note" style="margin:4px 0 0;font-size:.68rem">57~59강은 실패하면 파괴됩니다. 응무조 열은 그 강 유닛을 강화 대신 전부 팔 때(응무조 획득량 ${Math.round(cp).toLocaleString()}% 반영)입니다. 확률 구성과 유닛별 공격력은 아래 [A] · [B].</p>`;
   }
 }
 
@@ -4072,7 +4163,7 @@ function renderNewVersion(){
       <li><b>실측 기록</b>: 진 각성 1~435단, 60강 희생, 크리스탈 효과, 촉진 계수, 허수광산 돈 · 크레딧, 엑스트라 보스 줄 보상 등 인게임 테스트 결과는 공략 파일 <b>DPS_데이터_테스트_모음.md §14</b>에 주제별로 정리했습니다. 허수광산 돈 실측 53줄과 계산기 식 대조는 §14-A에, 데이터 대조 결과와 앞으로 할 일은 §15에 있습니다.</li>
       <li><b>확인할 것 (공략 데이터로 정리)</b>: ① 촉진의 보석 30개 = 촉진 ×1.3 — 공략 데이터 보석 표 「개당 0.01배, 30개 = x1.3」로 확정(최대 30개, 내림 위치는 DPS_데이터_테스트_모음.md §14-6 식). ② 성취의 보석 51개 이상 — 공략 데이터 첫_달성_보상 표의 0개·100개 열이 이 계산기 식과 38행 모두 일치하고, 인게임 L창 6쪽에서도 성취 51개 = 610%로 50개를 넘어도 +10%/개가 계속 붙는 것을 확인(실제 지급량도 46강 첫 달성에서 확인: 크레딧 +56,281,078 = ⌊160,000 × 6.1 × 1.5¹⁰⌋ — 51강 이상의 중간 개수 내림 위치만 미확인). ③ 생명의 크리스탈 허수광산 크레딧 ×1.1ⁿ — 공략 데이터 크리스탈 표 「1.1^n 배(곱연산)」로 확정, 인게임에서도 한 타 크레딧 16,868 → 18,556 → 20,411 → 22,445(생명 0 · 1 · 2 · 3)로 확인(오차 0.03% 이내). ④ 시간의 크리스탈 57~60강 판매 할인 — 「n% 할인(1% × n, 최대 30%)」로 확정, 값이 모두 정수라 내림 위치 문제 없음. ⑤ 59강 판매 어센트 0.01% · 60강 판매 25% 4종 — 공략 데이터 판매_뽑기 표 값 그대로(계산기와 일치). ⑥ 진 각성 1,000단(자릿수 4자리) — 본효과 ×(1,000 + L)/1,000은 공략 데이터 각성 표로 확정, 자릿수 ×1.1ⁿ(Ex 경험치·51강 이상 크레딧)도 인게임 1,009단에서 확인(D창 「자릿수 4자리 : 1.1^4배」 · 한 타 크레딧 3자리 값의 ×1.1 · 57강 표기 공격력 ×2.009 · 본효과는 크레딧에 안 붙음). ⑦ 오프라인 보상 시간당 ExPoint — 데이터에 없음. 설명서(N키 8쪽)는 「1시간당 1만」 · 「휴양 개당 +5%(100개면 x6)」이고, 인게임 실측은 후원 LV.20 · 배수 200%에서 1분 → 236 · 5분 → 980 · 9분 → 1,561 ExPoint(시간당 약 1만), 휴양의 보석 100개 · 배수 700%에서 5분 → 5,883(같은 5분 표기에 ×6.0)이라 <b>시간당 1만 × (1 + 휴양 5%/개)</b>로 확정하고 [스펙 요약]에 반영했습니다. L창 배수 표기 중 후원 +100%는 수령량에 곱해지지 않고, 생명의 크리스탈 반영은 미시험입니다(비운 시간은 초 단위로 세고 표기 분은 내림이라는 가정이며 스톱워치로는 안 쟀음. 새 런처는 인터넷이 연결된 상태로 저장·불러와야 오프라인 보상을 받음).</li>
       <li><b>최근 갱신 (2026-10-12)</b>: 공략 데이터(표 21개)와 이 계산기의 내장 표를 대조해 <b>경험치 쿠폰 보유 한도 999일</b>만 새로 반영했고, 나머지(미션 · 첫 달성 보상 · 엑스트라 보스 · 스탯 · 상점 · 허수아비 돈 · 크리스탈 32종과 강화비용 500행 · 보석·보주 비용 21,904행 · 판매 뽑기 · 개인보스 · 광산 포인트 · 각성 구간 · 후원 경험치 배수)는 모두 일치했습니다. 공지 수정 사항 — ① 51강 이상이 허수광산을 때린 몫이 표기 DPS에 절반만 들어가던 것 수정(57강 공격력 195만 · 공속 보통이면 DPS 195만, 이전 97.5만 → 허수광산 DPS 보상을 더 빨리 받음, 돈은 원래 맞게 들어옴). ② 엑스트라 보스 FI 데미지 합계에 51강 이상 몫이 절반만 들어가던 것 수정 — [한 판 보상] 탭의 「BOSS DPS 표기 = 초당 타수 ÷ 2」는 이전 실측 기준이라 <b>다시 재야 합니다</b>(수식은 그대로 둠). ③ 맵 리셋 뒤 엑보 줄 보상 재수령 수정. ④ N키 설명서 51~60강 첫 달성 크레딧 표기를 「보석 없을 때 값」으로 바꿈(실제 지급량 그대로). ⑤ L키 정보창 쪽 이동 — <b>7쪽 = 52~56강 판매 현황 · 8쪽 = 57~60강 판매 현황 · 9쪽 = 희생</b>(인게임 확인), 후원 특전 10~12쪽. ⑥ 설명서 진 각성 쪽에 효과 추가 — 진 각성 Level 1당 51~59강 공격력과 LV.MAX 허수아비·허수광산 돈 +0.1%(곱연산). 상세는 DPS_데이터_테스트_모음.md §15.</li>
-      <li><b>데이터가 비어 있는 곳</b>: 엑보 약 150해 위 줄의 문턱과 보상 · 줄 문턱 정확값(약 86억 · 214억 · 429억). 사용자 엑셀 원본은 파일에 넣지 않습니다.</li>
+      <li><b>데이터가 비어 있는 곳</b>: 엑보 줄 문턱 정확값(약 86억 · 214억 · 429억) · 약 100경 이상 줄의 지급 실측. 사용자 엑셀 원본은 파일에 넣지 않습니다.</li>
     </ul>
   </div>
 
@@ -4663,7 +4754,7 @@ const EXTRA_BOSS_UNLOCKS = [
   ['조', '4일째', '약 1조 ~ 약 1,000조 (4줄)', '약 1,000조'],
   ['경', '5일째', '약 1경 ~ 약 5,550경 (8줄)', '약 5,550경'],
   ['해', '6일째', '약 1해 1,500경 ~ 약 7,500해 (13줄)', '약 7,500해'],
-  ['자', '7일째부터', '1자', '멈춤 없음'],
+  ['자', '7일째부터', '1자 (마지막 줄)', '멈춤 없음 (1자가 끝)'],
 ]; // [묶음, 열리는 날, 줄(FI 누적 타격수 문턱), 멈추는 곳]
 // 엑보 보상 목록 화면(2026-10-11) — 25,000 위 줄. 화면 표기(핫타임·후원 대체 전 기본값). 1억 위 줄은 미확인.
 const EXTRA_BOSS_BEYOND = [
@@ -4699,6 +4790,18 @@ const EXTRA_BOSS_BEYOND = [
   ['약 5,550경', 'ExPoint 2,000,000'],
   ['약 1해 1,500경', 'ExPoint 3,000,000'],
   ['약 3해', 'ExPoint 4,000,000'],
+  ['약 5해', 'ExPoint 5,000,000'],
+  ['약 10해', 'ExPoint 6,000,000'],
+  ['약 25해', 'ExPoint 7,000,000'],
+  ['약 60해', 'ExPoint 8,000,000'],
+  ['약 150해', 'ExPoint 9,000,000'],
+  ['약 450해', 'ExPoint 10,000,000'],
+  ['약 900해', 'ExPoint 11,000,000'],
+  ['약 1,500해', 'ExPoint 12,000,000'],
+  ['약 3,200해', 'ExPoint 13,000,000'],
+  ['약 5,000해', 'ExPoint 14,000,000'],
+  ['약 7,500해', 'ExPoint 15,000,000'],
+  ['약 1자', 'ExPoint 16,000,000 (마지막 줄)'],
 ]; // [FI 누적 타격수, 보상]
 const STAT_SHEET = [["일반", "1", "1", "모든 허수아비 돈 수급량 1.0%", "LV.1·LV.2·LV.MAX 허수아비와 허수광산의 돈 수급량을 1% 증가시킵니다. 기본값 : 100%.", "100", "1", "%", "100", "100", "10000"], ["일반", "1", "2", "보유 유닛 공업 +1", "자신의 강화 유닛 데미지를 증가시킵니다. (1업당 +10%)", "20", "1", "", "100", "100", "2000"], ["일반", "1", "3", "+1 강화확률 +0.1%p", "+1 강화확률을 증가시킵니다. 주의 : +2, +3 강화확률에 대한 영향은 없습니다.", "10", "0.1", "%p", "100", "10.0", "1000"], ["일반", "1", "4", "+2 강화확률 +0.1%p", "+2 강화확률을 증가시킵니다. 주의 : 이 항목은 36강 유닛 이상부터 +1로 합산, 적용됩니다.", "200", "0.1", "%p", "50", "5.0", "10000"], ["일반", "1", "5", "+3 강화확률 +0.1%p", "+3 강화확률을 증가시킵니다. 주의 : 이 항목은 35강:+2로, 36강:+1로 합산 적용됩니다.", "1000", "0.1", "%p", "30", "3.0", "30000"], ["일반", "1", "6", "특수 강화확률 +0.1%p", "특수 강화확률을 증가시킵니다. 주의 : 이 항목은 40~43강 유닛에만 적용됩니다.", "500", "0.1", "%p", "100", "10.0", "50000"], ["일반", "2", "1", "+1 강화확률 2 +0.1%p", "추가 +1 강화확률을 증가시킵니다. 주의 : 먼저 1페이지 강화확률 스탯을 마스터 하시길 권장합니다.", "1000", "0.1", "%p", "50", "5.0", "50000"], ["일반", "2", "2", "+2 강화확률 2 +0.1%p", "추가 +2 강화확률을 증가시킵니다. 주의 : 먼저 1페이지 강화확률 스탯을 마스터 하시길 권장합니다.", "2500", "0.1", "%p", "20", "2.0", "50000"], ["일반", "2", "3", "+3 강화확률 2 +0.1%p", "추가 +3 강화확률을 증가시킵니다. 주의 : 먼저 1페이지 강화확률 스탯을 마스터 하시길 권장합니다.", "5000", "0.1", "%p", "10", "1.0", "50000"], ["일반", "2", "4", "특수 강화확률 2 +0.1%p", "특수 강화확률을 증가시킵니다. 주의 : 먼저 특수확률 스탯 1을 마스터 하시길 권장합니다.", "1000", "0.1", "%p", "50", "5.0", "50000"], ["일반", "2", "5", "특수 파괴 방지확률 +0.1%p", "특수 파괴 방지확률을 증가시킵니다. 주의 : 이 항목은 40강 이후 유닛만 적용됩니다.", "250", "0.1", "%p", "300", "30.0", "75000"], ["일반", "2", "6", "특수 파괴 방지확률 2 +0.1%p", "특수 파괴 방지확률을 증가시킵니다. 주의 : 먼저 파괴방지 1 스탯을 마스터 하시길 권장합니다.", "1000", "0.1", "%p", "100", "10.0", "100000"], ["일반", "3", "1", "44강 강화확률 +0.1%p", "44강 강화 시도시 강화확률을 증가시킵니다.", "1000", "0.1", "%p", "100", "10.0", "100000"], ["일반", "3", "2", "45강 강화확률 +0.1%p", "45강 강화 시도시 강화확률을 증가시킵니다.", "2000", "0.1", "%p", "100", "10.0", "200000"], ["일반", "3", "3", "46강 강화확률 +0.1%p", "46강 강화 시도시 강화확률을 증가시킵니다.", "3000", "0.1", "%p", "100", "10.0", "300000"], ["일반", "3", "4", "47강 강화확률 +0.1%p", "47강 강화 시도시 강화확률을 증가시킵니다.", "4000", "0.1", "%p", "100", "10.0", "400000"], ["일반", "3", "5", "48강 강화확률 +0.05%p", "48강 강화 시도시 강화확률을 증가시킵니다.", "10000", "0.05", "%p", "200", "10.0", "2000000"], ["일반", "3", "6", "자판기 1, 2의 촉진량 10 증가", "자판기 1, 2의 유닛 구입속도가 증가합니다.", "20000", "10", "", "2074", "20740", "41480000"], ["일반", "4", "1", "LV.MAX 허수아비 타격당 무색조각 +1", "LV.MAX 허수아비가 맞은 순간마다 (개인보스 배수 + 이 스탯) x 존의 내 유닛 수만큼 적립 · 10적립 = 무색 조각 1개", "300", "1", "", "100", "100", "30000"], ["초월", "5", "1", "추가 초월확률 +0.1%p", "추가 초월확률을 증가시킵니다.", "50", "0.1", "%p", "100", "10.0", "5000"], ["초월", "5", "2", "추가 51강 확률 +0.1%p", "추가 51강 강화확률을 증가시킵니다.", "1", "0.1", "%p", "200", "20.0", "200"], ["초월", "5", "3", "추가 52강 확률 +0.1%p", "추가 52강 강화확률을 증가시킵니다.", "2", "0.1", "%p", "200", "20.0", "400"], ["초월", "5", "4", "추가 53강 확률 +0.1%p", "추가 53강 강화확률을 증가시킵니다.", "4", "0.1", "%p", "200", "20.0", "800"], ["초월", "5", "5", "추가 54강 확률 +0.01%p", "추가 54강 강화확률을 증가시킵니다.", "6", "0.01", "%p", "200", "2.0", "1200"], ["초월", "5", "6", "추가 55강 확률 +0.01%p", "추가 55강 강화확률을 증가시킵니다.", "8", "0.01", "%p", "200", "2.0", "1600"], ["초월", "6", "1", "51강 유닛 공업 +1", "51강 유닛 데미지를 증가시킵니다. (1업당 +10%)", "1", "1", "", "100", "100", "100"], ["초월", "6", "2", "52강 유닛 공업 +1", "52강 유닛 데미지를 증가시킵니다. (1업당 +10%)", "2", "1", "", "100", "100", "200"], ["초월", "6", "3", "53강 유닛 공업 +1", "53강 유닛 데미지를 증가시킵니다. (1업당 +10%)", "4", "1", "", "100", "100", "400"], ["초월", "6", "4", "54강 유닛 공업 +1", "54강 유닛 데미지를 증가시킵니다. (1업당 +10%)", "6", "1", "", "100", "100", "600"], ["초월", "6", "5", "55강 유닛 공업 +1", "55강 유닛 데미지를 증가시킵니다. (1업당 +10%)", "8", "1", "", "100", "100", "800"], ["초월", "6", "6", "56강 유닛 공업 +1", "56강 유닛 데미지를 증가시킵니다. (1업당 +10%)", "10", "1", "", "100", "100", "1000"], ["초월", "7", "1", "추가 54강 확률 +0.05%p", "추가 54강 강화확률을 증가시킵니다.", "200", "0.05", "%p", "160", "8.0", "32000"], ["초월", "7", "2", "추가 55강 확률 +0.02%p", "추가 55강 강화확률을 증가시킵니다.", "200", "0.02", "%p", "300", "6.0", "60000"], ["초월", "7", "3", "추가 융합 확률 +0.1%p", "추가 56강 융합확률을 증가시킵니다.", "250", "0.1", "%p", "100", "10.0", "25000"], ["초월", "7", "4", "추가 57강 확률 +0.1%p", "추가 57강 강화확률을 증가시킵니다.", "2000", "0.1", "%p", "100", "10.0", "200000"], ["초월", "7", "5", "추가 58강 확률 +0.1%p", "추가 58강 강화확률을 증가시킵니다.", "3000", "0.1", "%p", "100", "10.0", "300000"], ["초월", "7", "6", "응축된 무색조각 획득량 증가 +1%p", "응축된 무색조각 획득 효율이 증가합니다. (응축된 무색조각 획득 배율 +1%p)", "500", "1", "%p", "200", "200", "100000"], ["초월", "8", "1", "자판기 1의 촉진량 1,000 증가", "자판기 1의 유닛 구입속도가 증가합니다.", "50000", "1000", "", "40000", "40000000", "2000000000"], ["초월", "8", "2", "자판기 2의 촉진량 1,000 증가", "자판기 2의 유닛 구입속도가 증가합니다.", "50000", "1000", "", "40000", "40000000", "2000000000"], ["초월", "8", "3", "광산 크레딧 채취 효율 증가 +1%p", "51~59강 허수광산 크레딧 획득량이 증가합니다. (1회당 +1%p, 최종 곱연산)", "20000", "1", "%p", "200", "200", "4000000"]]; // [종류, 쪽, 칸, 이름, 효과 설명, 1회 비용(포인트), 1회 증가량, 단위, 최대 투자 횟수, 최대 수치, 최대까지 총 비용(포인트)]
 const SHOP_SHEET = [["크레딧", "ExPoint", "1", "1000", "크레딧", "100000", "", ""], ["광산 포인트 (옛 배속 포인트)", "ExPoint", "1", "1", "점", "보유 한도까지", "2,000,000,000점까지", "한도까지만 산다"], ["경험치 쿠폰", "ExPoint", "1", "1", "시간", "100000", "999일까지", "만렙이면 살 수 없다"], ["45~50강 판매 2배 쿠폰", "ExPoint", "50", "1", "시간", "보유 한도까지", "60일까지", ""], ["핫 타임 쿠폰", "ExPoint", "100", "1", "시간", "보유 한도까지", "30일까지", ""], ["특별 핫 타임 쿠폰", "ExPoint", "10000", "1", "시간", "보유 한도까지", "30일까지", ""], ["45~50강 판매 2배 쿠폰 환불 (ExPoint 로 되돌려 받음)", "45~50강 판매 2배 쿠폰(시간)", "1", "50", "ExPoint", "가진 쿠폰 시간까지", "", ""], ["광산 크레딧 2배권", "ExPoint", "10000", "1", "시간", "보유 한도까지", "30일까지", ""], ["특수확률 +5% 쿠폰", "ExPoint", "500", "1", "시간", "보유 한도까지", "30일까지", ""], ["노말 크리스탈 상자", "ExPoint", "1000", "1", "개", "100000", "", "사면 바로 열린다"], ["노말 크리스탈 상자", "크리스탈 조각", "100", "1", "개", "100000", "", "사면 바로 열린다"], ["레어 크리스탈 상자", "크리스탈 조각", "2000", "1", "개", "100000", "", "사면 바로 열린다"], ["레어 크리스탈 상자", "ExPoint", "40000", "1", "개", "100000", "", "사면 바로 열린다"]]; // [물건, 내는 것, 내는 양, 받는 양, 받는 단위, 한 번에 최대(개), 보유 한도, 비고]
@@ -4827,7 +4930,7 @@ function extraBossSheetHTML(){
     <p class="note" style="margin-top:6px;margin-bottom:0">위 [3-4] 표의 크레딧은 5,000타격이 「보스 처치 추가 리워드 크레딧」(50,000), 25,000타격이 「단체 크레딧(방 전원)」(200,000)입니다. 핫타임이 켜져 있으면 ExPoint(각자)와 크레딧이 같은 양만큼 한 번 더 붙습니다(5,000타격은 ExPoint만, 25,000타격은 ExPoint·크레딧 둘 다). 후원 열은 후원 특전 「FI 타격 5천 ExPoint +5천 / 2.5만 +2만」(LV.6~11), 「+1만 / +3만」(LV.12~)과 같습니다.</p>
     <b style="display:block;margin-top:14px">25,000 위 줄 — 확인한 보상</b>
     <table style="margin-top:8px"><tr><th style="text-align:left">FI 누적 타격수</th><th style="text-align:left">보상 (화면 표기 기본값)</th></tr>${EXTRA_BOSS_BEYOND.map(r => `<tr><td ${_TL}>${r[0]}</td><td ${_TL}>${r[1]}</td></tr>`).join('')}</table>
-    <p class="note" style="margin-top:6px;margin-bottom:0">373,737마다~5,000만 줄의 ExPoint 합계 1,400 · 크리스탈 조각 6개, 1억 줄까지 합하면 ExPoint 2,150 · 크리스탈 조각 11개, 10억 줄까지는 ExPoint 8,150 · 크리스탈 조각 101개 · 노말 등급 크리스탈 9개, 약 214억 줄까지는 ExPoint 64,150 · 크리스탈 조각 1,121개 · 노말 등급 크리스탈 26개 · 레어 등급 크리스탈 7개, 약 1,000억 줄(억 묶음 11줄 끝)까지는 ExPoint 214,150 · 크리스탈 조각 3,421개 · 레어 등급 크리스탈 23개, 조 묶음 4줄은 ExPoint 1,400,000 · 유니크 등급 크리스탈 8개 · 상급 크리스탈 조각 4개입니다(모두 기본값 — 후원 ×5 · 미래 +1 ×1.2 · 핫타임 ×2이면 ExPoint는 ×12)(기본값 — 핫타임이 켜진 뒤 넘기면 한 번 더, 후원 LV별 대체값은 5,000·25,000 줄만 데이터에 있음). 약 3해 위 줄(해 묶음 13줄 중 11줄 · 자 묶음)은 확인 전입니다. 경 묶음 8줄은 모두 확인됨(ExPoint 약 1경~약 1,000경 1,000,000씩, 약 5,550경 2,000,000 — 합계 9,000,000), 해 묶음 첫 두 줄은 3,000,000 · 4,000,000(보상 목록은 다음 8줄만 보여 줘서 줄을 넘겨야 위 줄이 나타남). 약 86억 이상은 화면 표기가 「약」입니다. 억 묶음 11줄(1억~약 1,000억)과 조 묶음 4줄(약 1조~약 1,000조)은 아래 해금 표의 줄 수와 일치합니다. <b>후원 LV.20 + 일반 핫타임 실측</b>: 25,000 줄 ExPoint +85,000 = (기본 2,500 × ExPoint 최종 5배 + 후원 +3만) × 2(핫타임) — 5,000 줄도 같은 식((500 × 5 + 1만) × 핫타임). 373,737 줄도 실측 +300(85,000 → 85,300) = 30 × 5 × 2 — 만 묶음 줄은 후원 몫이 없어 기본값에 최종 배수와 핫타임만 곱해집니다. 51강 이상 유닛은 한 번 칠 때 <b>타수가 그 유닛의 공격력만큼</b> 늘어납니다(사용자 확인 — 강타의 보석·돌파 배수가 타수에 붙는지는 미확인).</p>
+    <p class="note" style="margin-top:6px;margin-bottom:0">373,737마다~5,000만 줄의 ExPoint 합계 1,400 · 크리스탈 조각 6개, 1억 줄까지 합하면 ExPoint 2,150 · 크리스탈 조각 11개, 10억 줄까지는 ExPoint 8,150 · 크리스탈 조각 101개 · 노말 등급 크리스탈 9개, 약 214억 줄까지는 ExPoint 64,150 · 크리스탈 조각 1,121개 · 노말 등급 크리스탈 26개 · 레어 등급 크리스탈 7개, 약 1,000억 줄(억 묶음 11줄 끝)까지는 ExPoint 214,150 · 크리스탈 조각 3,421개 · 레어 등급 크리스탈 23개, 조 묶음 4줄은 ExPoint 1,400,000 · 유니크 등급 크리스탈 8개 · 상급 크리스탈 조각 4개입니다(모두 기본값 — 후원 ×5 · 미래 +1 ×1.2 · 핫타임 ×2이면 ExPoint는 ×12)(기본값 — 핫타임이 켜진 뒤 넘기면 한 번 더, 후원 LV별 대체값은 5,000·25,000 줄만 데이터에 있음). 경 묶음 8줄(ExPoint 약 1경~약 1,000경 1,000,000씩, 약 5,550경 2,000,000 — 합계 9,000,000), 해 묶음 13줄(약 1해 1,500경 3,000,000부터 줄마다 +1,000,000, 약 7,500해 15,000,000), 자 묶음 1줄(약 1자 16,000,000)까지 모두 확인됐고 <b>약 1자가 마지막 줄</b>입니다(보상 목록은 8줄만 보여 줘서 줄을 넘겨야 위 줄이 나타남). 약 86억 이상은 화면 표기가 「약」입니다. 억 묶음 11줄(1억~약 1,000억)과 조 묶음 4줄(약 1조~약 1,000조)은 아래 해금 표의 줄 수와 일치합니다. <b>후원 LV.20 + 일반 핫타임 실측</b>: 25,000 줄 ExPoint +85,000 = (기본 2,500 × ExPoint 최종 5배 + 후원 +3만) × 2(핫타임) — 5,000 줄도 같은 식((500 × 5 + 1만) × 핫타임). 373,737 줄도 실측 +300(85,000 → 85,300) = 30 × 5 × 2 — 만 묶음 줄은 후원 몫이 없어 기본값에 최종 배수와 핫타임만 곱해집니다. 51강 이상 유닛은 한 번 칠 때 <b>타수가 그 유닛의 공격력만큼</b> 늘어납니다(사용자 확인 — 강타의 보석·돌파 배수가 타수에 붙는지는 미확인).</p>
     <b style="display:block;margin-top:14px">FI 문턱이 열리는 순서 (정식 출시 뒤 하루마다)</b>
     <table style="margin-top:8px"><tr><th>묶음</th><th>열리는 날</th><th style="text-align:left">줄 (FI 누적 타격수)</th><th>멈추는 곳</th></tr>${EXTRA_BOSS_UNLOCKS.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td ${_TL}>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table>
     <p class="note" style="margin-top:6px;margin-bottom:0">정식 출시 뒤 <b>하루마다</b> 한 묶음씩 열립니다(README: 「만(5000만회까지) · 억 · 조 · 경 · 해 · 자 순, 7일째부터 멈춤 없음」). 날짜는 <b>판을 시작한 날</b> 기준이라 판 도중 날이 바뀌어도 그 판은 그대로입니다. FI는 그날 열린 묶음의 「멈추는 곳」까지 맞으면 멈춥니다. 방 PC 시계가 하루 이상 어긋나면 FI는 25,000에서 멈춥니다. 만 묶음 줄의 보상 값은 위 표(화면 표기)이고 README 데이터에는 없습니다.</p>
@@ -5144,7 +5247,7 @@ const MINE_BASE = 1.179e15;
 // LV.MAX 허수아비의 N(「돈 수급 총 증가량」)에 진 각성도 곱해져 있다 — 진 각성 L이면 × (1,000 + L) / 1,000 (고유유닛_각성 표). 내림 순서는 미확인이라
 // 재물 × 각성 바로 뒤에 한 번 내리는 것으로 가정(진 각성 0이면 아무 영향 없음).
 function moneyPctMult(s, w, g, a, t, pm){
-  t = t || 0; pm = pm === undefined ? pamMoneyMult() : pm;   // pm: 파멸 최종 돈 배수 (허수광산 계산기는 자기 입력칸으로 따로 곱해서 1을 넘긴다)
+  t = t || 0; pm = pm === undefined ? pamMoneyMult() * bondMoneyMult() : pm;   // pm: 파멸 최종 돈 배수 × 인연의 보주 (허수광산 계산기는 파멸을 자기 입력칸으로 따로 곱해서 인연만 넘긴다)
   const raw = (1 + 0.01 * s) * (1 + 0.1 * w) * (1 + 0.1 * g) * (1 + 0.1 * a) * (1000 + t) / 1000;
   if(![s, w, g, a, t].every(x => isFinite(x) && x < 1e10)) return raw * pm;
   let p = BigInt(Math.round(10 + w)) * BigInt(Math.round(10 + a));   // 재물 × 각성 (이미 정수 %)
@@ -5155,7 +5258,7 @@ function moneyPctMult(s, w, g, a, t, pm){
 }
 function mineMoneyCalc(p){
   const atkSum = 1 + 0.1 * p.atkUp + p.bossAtkPercent / 100;
-  const moneyMult = moneyPctMult(p.stat11, p.wealth, p.glut || 0, p.awaken, trueAwakenLevel, 1);
+  const moneyMult = moneyPctMult(p.stat11, p.wealth, p.glut || 0, p.awaken, trueAwakenLevel, bondMoneyMult());
   const display = p.baseAtk * atkSum * (1 + 0.1 * p.hostile);
   const intMult = Math.floor(atkSum + 0.5 + 1e-9);          // 51강 이상의 공통 배수 M: 50강 이하와 같은 반올림 (인게임 수백 회 타격으로 확인, .5는 올림)
   const m50 = Math.floor(atkSum + 0.5 + 1e-9);          // 50강 이하 유닛: 공격력 배수 반올림 (영상: 5.1 → 5, 5.9 → 6)
@@ -5175,7 +5278,7 @@ function mineMoneyBlockHTML(){
     <div class="stat"><span>돈 증가량 배수 (인게임 「허수 돈 증가량」)</span><span><b>[(1 + 0.1×재물의 보석) × (1 + 0.1×각성 레벨)] × (1 + 0.01×1P-1)을 곱해 정수 %로 내림 → × (1 + 0.1×폭식의 보주)를 곱해 다시 정수 %로 내림</b> (예: 재물 2개 · 각성 4레벨 · 1P-1 56레벨 · 폭식 7개 = 120% × 140% = 168%, × 1.56 = 262.08% → 262%, × 1.7 = 445.4% → 445% — 실측, 인게임 증가율 표시와 같음. 폭식의 보주 최대 1000개 = ×101. LV.MAX·허수광산 전용이라 일반 사냥터(LV.1/LV.2)에는 1P-1만 붙음)</span></div>
     <div class="stat" style="border-bottom:none"><span>표기 공격력</span><span><b>기본 × (1 + 0.1×공업 + 보스%) × (1 + 0.1×적대의 보석)</b></span></div>
     <p class="note" style="margin-top:6px;margin-bottom:8px">공업·보스 공격력은 합연산이고 인게임 「공격력 +N%」와 같습니다(공업 100 + 보스 1~5단계 합계 400% = +1400%, ×15). 50강 이하 유닛의 광산 1타는 공격력 배수를 반올림한 정수(.5는 올림이라 보스 10단계 기준 공업 5·15·25…레벨에서 한 계단)에 비례하고, 적대의 보석은 광산 배수에 들어가지 않습니다(표기 공격력과 허수맥스에는 곱연산으로 적용). 50강 이하 유닛의 1타는 유닛 공격력·공속·강수, 일반 레벨(1만~30만 확인), ExLv(1~500만 확인), 보유 크레딧(약 10³²까지 확인)과 무관하며 기수에 정비례합니다. 51강 이상은 공격력에 비례하는 항(2×표기 공격력)이 더해지고(업그레이드 반영 값 사용), 공업은 51강 이상 공격력에는 안 먹지만 공통 배수 M에는 들어갑니다. 돈의 1타는 공속과 무관하지만(크리티컬 타는 공격력 항만 두 배, 51강 125배 = 5 + 2×60), 크레딧 1타는 공속에 반비례합니다. 느린 유닛은 타격당 크레딧이 커서 유닛 1기당 초당 크레딧은 공속과 무관하게 같고, 돈은 빠른 유닛일수록 초당 더 많이 법니다. 크레딧 1타는 공격력·공업과 무관합니다(구판 실측: 51강 30 · 52강 200 · 53강 350 · 54강 700에서 1 · 2 · 1 · 0.5. 현재는 여기에 강별 배수가 곱해집니다). 배속 배수는 초당 값에만 곱하고 1타 값에는 곱하지 않습니다. 1.179×10¹⁵ = 10¹⁰ × 117,900이며 측정 오차(±0.0001%) 안에서 깔끔한 정수라, 계산으로 유도된 값이 아니라 고정 상수로 보입니다.</p>
-    <p class="note" style="margin-top:8px;margin-bottom:0"><b>미확인</b>: 52·53강의 M / 2D 올라오는 순서, 광산 단 2단 이상의 곱연산 실측, 생명의 크리스탈과 초월 8쪽-3의 크레딧 곱(그 밖의 크레딧 배수 — 후원·탐욕·창조·채광의 보주·2배권·진 각성 — 은 실측 완료, 돈 증가량 배수는 크레딧과 무관, 크리티컬 타도 일반 타와 같은 크레딧), 49강(3프레임)·50강(1프레임 2타) 고유유닛 자체의 공속 직접 측정, 초당 환산(42ms ÷ 프레임)과 실제 프레임의 약 0.8% 차이, 진 각성이 돈에 곱해지는 내림 위치(재물 × 각성 바로 뒤로 가정). 신위·창조·멀티 보너스의 표기 공격력 반영은 [56~59강 정보] 탭에서 확인됨.</p>
+    <p class="note" style="margin-top:8px;margin-bottom:0"><b>미확인</b>: 52·53강의 M / 2D 올라오는 순서, 생명의 크리스탈의 크레딧 곱(그 밖의 크레딧 배수 — 광산 단 ×단수 곱(20단 실측)·초월 8쪽-3(채취효율 % 안에서 곱)·후원·탐욕·창조·채광의 보주·2배권·진 각성 — 은 실측 완료, 돈 증가량 배수는 크레딧과 무관, 크리티컬 타도 일반 타와 같은 크레딧), 49강(3프레임)·50강(1프레임 2타) 고유유닛 자체의 공속 직접 측정, 초당 환산(42ms ÷ 프레임)과 실제 프레임의 약 0.8% 차이, 진 각성이 돈에 곱해지는 내림 위치(재물 × 각성 바로 뒤로 가정). 신위·창조·멀티 보너스의 표기 공격력 반영은 [56~59강 정보] 탭에서 확인됨.</p>
   </div>
 `;
 }
@@ -5201,7 +5304,7 @@ function mineCalcPanelHTML(sfx){
   <div class="result" style="margin-top:20px;">
     <b>[3-5-2] 허수광산 계산기</b>
     <div style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end;margin-top:8px">
-      ${f('mm_atkUp', '공업(1P-2) 레벨', getStatInv(1, 2))}${f('mm_s11', '1P-1 레벨', getStatInv(1, 1))}${f('mm_wealth', '재물의 보석', getGemInv('wealth'))}${f('mm_glut', '폭식의 보주', 0)}${f('mm_awaken', '각성 레벨', effectiveAwakenLevel())}${f('mm_host', '적대의 보석', getGemInv('hostile'))}${f('mm_base', '기본 공격력', 2800)}${f('mm_unitAtk', '51강+ 유닛 표기 공격력', 30)}${f('mm_count', '기수', 1)}
+      ${f('mm_atkUp', '공업(1P-2) 레벨', getStatInv(1, 2))}${f('mm_s11', '1P-1 레벨', getStatInv(1, 1))}${f('mm_wealth', '재물의 보석', getGemInv('wealth'))}${f('mm_glut', '폭식의 보주', getOrb('glut'))}${f('mm_awaken', '각성 레벨', effectiveAwakenLevel())}${f('mm_host', '적대의 보석', getGemInv('hostile'))}${f('mm_base', '기본 공격력', 2800)}${f('mm_unitAtk', '51강+ 유닛 표기 공격력', 30)}${f('mm_count', '기수', 1)}
     </div>
     <div id="mineMoneyOut${sfx}" style="margin-top:8px"></div>
     ${mineFieldHTML(sfx)}
@@ -5515,16 +5618,16 @@ function specSummarySections(){
   ];
 
   // ---- 공격력 · 돈 수급 ----
-  const moneyMult = moneyPctMult(g(1, 1), getGemInv('wealth'), 0, effectiveAwakenLevel(), trueAwakenLevel);
+  const moneyMult = moneyPctMult(g(1, 1), getGemInv('wealth'), getOrb('glut'), effectiveAwakenLevel(), trueAwakenLevel);
   const power = [
     ['총 공격력 증가량', PC(g(1, 2) * 10 + bb.atkPercent, 0), `공업 ${g(1, 2)}레벨 ${g(1, 2) * 10}% + 개인보스 ${bb.atkPercent}% (적대의 보석은 별도 곱)`],
-    ['LV.MAX 허수아비, 허수광산 돈 수급 총 증가량', PC(moneyMult * 100, 0), `총 배수 (인게임 표기: 1P-1 1레벨 = +101%) = 재물의 보석 ×${n2(1 + 0.1 * getGemInv('wealth'), 2)} × 각성 ×${n2(awakenMoneyMult(), 2)}${trueAwakenLevel > 0 ? ' × 진 각성 ×' + n2(trueAwakenBaseMult(), 3) : ''}를 먼저 곱한 뒤 1P-1 ×${n2(1 + 0.01 * g(1, 1), 2)}를 곱해 정수 %로 내림 (예: 120% × 1.56 = 187.2% → 187%) (폭식의 보주는 입력칸이 없고, 폭식은 그 뒤에 한 번 더 곱해 내림)`],
+    ['LV.MAX 허수아비, 허수광산 돈 수급 총 증가량', PC(moneyMult * 100, 0), `총 배수 (인게임 표기: 1P-1 1레벨 = +101%) = 재물의 보석 ×${n2(1 + 0.1 * getGemInv('wealth'), 2)} × 각성 ×${n2(awakenMoneyMult(), 2)}${trueAwakenLevel > 0 ? ' × 진 각성 ×' + n2(trueAwakenBaseMult(), 3) : ''}를 먼저 곱한 뒤 1P-1 ×${n2(1 + 0.01 * g(1, 1), 2)}를 곱해 정수 %로 내림 (예: 120% × 1.56 = 187.2% → 187%) (폭식의 보주 ${getOrb('glut')}개는 그 뒤에 한 번 더 곱해 내림)${bondOrbOwned() ? ' · 인연의 보주 ×' + bondMoneyMult() + ' 포함' : ''}`],
   ];
 
   // ---- 자판기 · 크리티컬 · 배속 ----
   const crit = mineCritInfo();
   const speed = [
-    ['자판기 1 최종 촉진 계수', String(Math.round(vendBoostOf(1) * 1000) / 1000), `(1 + 3P-6 ${g(3, 6)}레벨×10 + 고유유닛 단수 촉진 ${raceVendBonus(1)} + 초월 8쪽-1 ${quasarStat.s81.toLocaleString()}Lv×1,000) × 최종 유닛 생산량 ×${n2(finalProdMult(), 2)} (증식 ${getQuasarLv('jeungsik')}Lv · 파멸 ${getOriginLv('pamyul')}Lv · 시간 ${timeCryLv()}Lv, 합연산, 소수 버림) × 촉진의 보석 ×${n2(vendGemMult(), 2)} (${Math.min(getGemInv('accel'), VENDING_DATA.gemMax)}개 × 0.01, 최대 ${VENDING_DATA.gemMax}개 · 마지막에 곱하고 다시 내림)`],
+    ['자판기 1 최종 촉진 계수', String(Math.round(vendBoostOf(1) * 1000) / 1000), `(1 + 3P-6 ${g(3, 6)}레벨×10 + 고유유닛 단수 촉진 ${raceVendBonus(1)} + 초월 8쪽-1 ${quasarStat.s81.toLocaleString()}Lv×1,000) × 최종 유닛 생산량 ×${n2(finalProdMult(), 2)} (증식 ${getQuasarLv('jeungsik')}Lv · 파멸 ${getOriginLv('pamyul')}Lv · 시간 ${timeCryLv()}Lv, 합연산, 소수 버림)${moonOrbOwned() ? ` × 월륜의 보주 ×${n2(moonVendMult(), 1)} (초월 레벨 ${digitCount(exLevel)}자리 × 10%, 소수 버림)` : ''} × 촉진의 보석 ×${n2(vendGemMult(), 2)} (${Math.min(getGemInv('accel'), VENDING_DATA.gemMax)}개 × 0.01, 최대 ${VENDING_DATA.gemMax}개 · 마지막에 곱하고 다시 내림)`],
     ['자판기 2 최종 촉진 계수', String(Math.round(vendBoostOf(2) * 1000) / 1000), `자판기 1과 같은 식 (고유유닛 단수 촉진 ${raceVendBonus(2)} · 8쪽-2 ${quasarStat.s82.toLocaleString()}Lv) — 총 단수 ${unitStepDisplay().toLocaleString()}단, 500n+106단마다 +1이 자판기 2 → 자판기 1 순으로 번갈아 붙음`],
     ['크리티컬 확률', n2(crit.p * 100, 2) + ' %', '기본 1% + 파멸의 크리스탈 2%/Lv (절명의 보주는 [56~59강 정보] 탭 보주 칸 — 인게임 확인: 절명 500개 = 51%)'],
     ['크리티컬에 의한 데미지 배율', crit.mult + ' 배', `기본 2배 + 우주의 크리스탈 21강부터 1강당 +1배 (우주 ${Math.min(50, (exCalcState.cry && exCalcState.cry.uju) || 0)}강, [50~56강] 탭 입력)`],

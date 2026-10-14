@@ -211,6 +211,7 @@ const STAT_NAME = {'1_1':'돈 수급 +1%','1_2':'공업','1_3':'+1 강화확률'
                    '3_1':'44강 확률','3_2':'45강 확률','3_3':'46강 확률','3_4':'47강 확률','3_5':'48강 확률','3_6':'자판기 촉진','4_1':'LV.MAX 타격당 무조'};
 const RACE_NAME = {Q:'공격속도',W:'공격력',E:'판매 경험치',A:'+1 강화확률',S:'특수 강화확률',D:'사냥터 위치',X:'특수 파괴방지'};
 const UPGRADE_COST = 10000;
+const RACE_VEND_CAP = 200000;   // 레이스(단수) 촉진 상한 — P2와 같은 값 (P1 안에 없어서 앞 단계가 ReferenceError로 멈췄음, 2026-10-12 고침)
 const SPEC_COUPON_EP = 500; // 특수확률 +5% 쿠폰 1시간
 const FI_PICK_PRICE = 8e14; // 36강 자판기 가격 (엑보에 36강 넣기 전략)
 const BASE_MS = 23;     // 시간 입력값의 기준 프레임 길이 (T.010 레벨 1, 영상 2 실측)
@@ -226,19 +227,19 @@ const DEFAULTS = {
   firstAttemptSec:0.20, chainAttemptSec:0.11, descentSec:0.83, vendReactSec:0.08,
   loadSec:15, uniqueSec:1.5, setupSec:5, placeSec:1.0, removeSec:1.5, batchSec:2, autoHunt:'on', swapBatch:12, sendupSec:0, sellSec:1.5,
   bossSec:2, bossWindowSec:10, upgradeSec:1, statSec:1, expointSec:5, gemSec:2, toggleSec:1, shopSec:2, rerollSec:37,
-  statMode:'auto', statSave:1000, statSaveFrac:0.2, internalFrom:'start', rush45:'off', rush36Level:130, effTarget:'staged', fiPick:'off', fiPickWait:600, fiUp:'on',   // 엑보: 강화터에서 26강이 나오면 자동으로 26강 하나가 때림, 사서 넣지 않음 (사용자 2026-10-07). 더 높은 단계가 나오면 그 유닛으로 바뀜(사용자 확인 2026-10-07) — 26강 고정이면 프리셋 「엑보 26강 고정」(fiUp 'f26' + 앞 단계 5,000타 리방 1번 + 뒤 단계 5,000타마다 리방, 24판 13.73h vs 12.11h)
+  statMode:'auto', statSave:1000, statSaveFrac:0.2, rush45:'off', rush36Level:130, effTarget:'staged', fiPick:'off', fiPickWait:600, fiUp:'on',   // 엑보: 강화터에서 26강이 나오면 자동으로 26강 하나가 때림, 사서 넣지 않음 (사용자 2026-10-07). 더 높은 단계가 나오면 그 유닛으로 바뀜(사용자 확인 2026-10-07) — 26강 고정이면 프리셋 「엑보 26강 고정」(fiUp 'f26' + 앞 단계 5,000타 리방 1번 + 뒤 단계 5,000타마다 리방, 24판 13.73h vs 12.11h)
   statOrder:'1_3:100, 1_2:100, 1_4:50, 1_1:100, 1_6:100, 2_5:300, 1_5:30, 2_1:50, 2_4:50, 2_2:20, 2_3:10, 2_6:100',
   raceMode:'order',
   raceOrder:'D:10, W:5, Q:3, A:20, S:10, X:20, W:20, Q:6, E:20',
-  vendMax:46, minDescend:2, keepFrom:40, fill40:'on', lv2StopDps:0, missionFix:'h40', bossFirst:'on', leftover:'up', missionMode:'easy', m6Wait:120,
+  vendMax:46, minDescend:2, keepFrom:40, lv2StopDps:0, missionFix:'h40', bossFirst:'on', leftover:'up', missionMode:'easy', m6Wait:120,
   expCouponHours:10, expRest:'mixedhot', specAhead:1, specBank:2000, hotBeforeFI:'on',
   rerollAfter5k:0, rerollAfter25k:0, sell40Frac:0, bossHigh:'off', bossHighStages:1, bossHighMaxHold:8,   // 앞 단계 리방 없음 (사용자 2026-10-10: ExPoint 1 = 크레딧 1,000이라 리방 안 해도 특핫·승급을 다 삼. T.020 96판: 5,000타 리방 1번 대비 전체 −0.04h · 첫 44강 −4분 · 첫 50강 +0.6분)
   epFund:'all',
   // 44→50강
-  sellMode:'value', gemMode:'auto', gemSaveHours:1, fillHighFrom:41, fillHighTo:48, highOver40:'on', cap41Pre36:-1, climbRule:'fixed', climbBias:1, multiBonus:'on', specialHot:'on', sell2x:'on', creditFloor:2e6, shardHorizonH:5,
+  sellMode:'value', gemMode:'auto', gemSaveHours:1, fillHighFrom:41, fillHighTo:48, cap41Pre36:-1, climbRule:'fixed', climbBias:1, multiBonus:'auto', specialHot:'on', sell2x:'on', creditFloor:2e6, shardHorizonH:5,
   // 통합: 먼저 살 보석 · 넘겨주기 · 엑보
-  gemFirst1:'hostile:30, accel:5, wealth:20, exp:1000, ultimate:100', gemFirstMode1:'free', gemSched1:'m35:low:100, f46:mid:100, m37:high:100', gemAuto1:'mission', m35When:'now', p1Mine:'on',   // 보석은 미션 무조를 받을 때 한 번에 (사용자 안 2026-10-10: 44강 전엔 적대·촉진·재물·경험·궁극만, 하급·중급·상급은 정해 둔 때 100개씩 — 96판 무조 생길 때마다 사기와 전체 +0.02±0.03h · 첫 50강 +0.5분으로 같음)
-  spHotWhen:'first25k', specLate:'on', specStart:'fill40', hotAlways:'on', floorWhen:'f45', epCredit:'up', hold40Min:0, spHotPreRR:'off', raceFirstE:'on', fiMultiN:1, fiMultiRooms:0, fiMultiN2:1, fiCrX:1, fiEpX:1, upgFirst:'on', fiBaseFin:'on', scareT018:'on', tierStick:'on', patienceCap:-1, handoffBoost:50, fiWait:300, fi1Target:26, fi1Wait:-1, p1Cry:'', p1LuckLv:0, p1BoxKeep:0, fiEp5k:-1, cap41:25   // 앞 단계 크리스탈 1칸(코드:강) · 앞 단계 4-1 상한 (2026-10-06 96판: 2~25면 0.1~0.2h 빠름, 0은 효과 없음, 제한 없음은 3h쯤 96까지 찍음)
+  gemFirst1:'hostile:30, wealth:20, exp:1000, ultimate:100', gemSched1:'', gemAuto1:'mission', m35When:'now', // 보석은 미션 무조를 받을 때 한 번에 (정해 둔 때 하급·중급·상급 100개씩 사기는 2인 48판에서 우주 +10 +0.10±0.03h · 첫 50강 +0.7분 → 기본은 안 씀, 미션 때 효율대로 나눠 삼)
+  spHotWhen:'first25k', specLate:'on', specStart:'fill40', hotAlways:'on', floorWhen:'f45', epCredit:'up', hold40Min:0, spHotPreRR:'off', raceFirstE:'on', fiMultiN:2, fiMultiRooms:1, fiMultiN2:2, fiCrX:1, fiEpX:1, upgFirst:'on', fiBaseFin:'on', scareT018:'on', tierStick:'on', patienceCap:-1, handoffBoost:50, fiWait:300, fi1Target:26, fi1Wait:-1, p1Cry:'', p1LuckLv:0, p1BoxKeep:0, fiEp5k:-1, cap41:25   // 앞 단계 크리스탈 1칸(코드:강) · 앞 단계 4-1 상한 (2026-10-06 96판: 2~25면 0.1~0.2h 빠름, 0은 효과 없음, 제한 없음은 3h쯤 96까지 찍음)
 };
 
 function parseOrder(str, valid, upper){
@@ -355,7 +356,7 @@ function run(P0, seed, wantLog, ext){
   const L = txt => { if (log){ if (swapAcc || statAcc || upAcc) flushPending(); log.push([S.t, txt]); } };
   const fsec = f => f * S.frameMs / 1000;
   // 내부계산: 자판기 기능이라 처음부터 켤 수 있음 (사용자 2026-10-10, internalFrom 'start') — 강화·판매에 이동 시간이 들지 않음. '36' = 예전 가정(3P-6을 찍어 촉진 11/11이 되면)
-  const mv = f => (P.internalFrom === 'start' || S.st['3_6'] >= 1) ? 0 : f * S.frameMs / 1000;
+  const mv = f => 0;   // 내부계산은 처음부터 (이동 시간 없음)
   const lg = x => Math.log(Math.max(1e-300, x));
 
   // ----- 배속 (T.010: 레벨 자릿수, 방에서 가장 빠른 사람을 따름) -----
@@ -420,7 +421,7 @@ function run(P0, seed, wantLog, ext){
   const atkMultOf = (st, gm) => (1 + 0.1 * st['1_2'] + S.bossAtk / 100) * (1 + 0.1 * (gm || S.gems).hostile);
   // 통합: 개인보스 10단계를 깨면 허수광산이 열려, LV.MAX 유닛은 허수광산(1타 1.179×10¹⁵ × M)이 더 벌면 그쪽을 친다 (흐름 엔진·계산기 huntComposition과 같음)
   const mineOpen = () => S.bossHigh >= 5;
-  const mineHits = (lv, st, gm) => { if (!mineOpen() || P.p1Mine === 'off') return false;   // p1Mine off: 광산이 열려도 허수아비(무조)를 침 (비교용)
+  const mineHits = (lv, st, gm) => { if (!mineOpen()) return false;
     const M = Math.floor(1 + 0.1 * st['1_2'] + S.bossAtk / 100 + 0.5 + 1e-9); return HITS24[lv] * MINE_BASE * M >= DPS24[lv] * atkMultOf(st, gm) * 1e10; };
   function computeRateSt(arr, st, race, gm){
     gm = gm || S.gems;
@@ -518,9 +519,9 @@ function run(P0, seed, wantLog, ext){
   function countLv(lv){ let n = 0; for (const x of S.hunt) if (x === lv) n++; for (const x of S.pad) if (x === lv) n++; return n; }
   // 「N강 48기 보유」 미션(23번 40강 · 38번 46강): 그 강을 사냥터에 48기 쥐고 기다림 — 위 강은 사냥터에 안 넣음 (missionFix, 2026-10-10 T.020 미션 보상이 커져서).
   // 1시간 미션(16번)에 막혀 있어도 사이 미션이 레벨·만들기·시간뿐이면 미리 쥠 (40강 풀을 1시간까지 유지)
-  // missionFix: 'on' = 40·46강 둘 다 쥠 · 'h40' = 40강만 쥠 · 'later' = 안 쥠(보유 미션은 뒤 단계에서 그 강이 쉽게 나올 때 깸) · 'off' = 예전(뒤 단계 판매 미션도 막힘)
+  // missionFix: 'on' = 40·46강 둘 다 쥠 · 'h40' = 40강만 쥠 · 'regather' = 1시간 미션 때 다시 모음
   function holdLv(){
-    if (P.missionFix === 'off' || P.missionFix === 'later' || P.missionMode !== 'easy') return 0;
+    if (P.missionMode !== 'easy') return 0;
     // 'regather': 미리 쥐지 않고, 23번(40강 48기)이 지금 미션이 되면(1시간) 그때 나오는 40강을 강화하지 않고 발판에 48기까지 모음 (사냥터는 그대로)
     if (P.missionFix === 'regather'){ const m = MISSIONS[S.mission]; return (m && m.k === 'hold' && m.lv === 40 && S.reached[40]) ? 40 : 0; }
     for (let i = S.mission; i < MISSIONS.length && i < S.mission + 12; i++){
@@ -617,12 +618,12 @@ function run(P0, seed, wantLog, ext){
     thrDirty = false; return thrVal;
   }
   // 40강으로 사냥터 채우기(fill40): 40강은 계속 강화할 강이어도 사냥터 하위 칸보다 좋으면 내림
-  function shouldDescend(lv){ return lv >= P.minDescend && !(lv2Stopped() && lv >= 26 && lv <= 40) && (lv < P.keepFrom || (lv === 40 && P.fill40 === 'on' && !autoOn())) && (value(lv) > thr() || bossLv1Short(lv)); }
+  function shouldDescend(lv){ return lv >= P.minDescend && !(lv2Stopped() && lv >= 26 && lv <= 40) && (lv < P.keepFrom || (lv === 40 && !autoOn())) && (value(lv) > thr() || bossLv1Short(lv)); }
   function lv2Stopped(){ return P.lv2StopDps > 0 && S.lv2StopRoom === S.rerolls; }
   // LV.MAX 사냥터 채우기(fillHighFrom): 이 강 이상은 사냥터 하위 칸보다 좋으면 내려서 사냥터에 넣음 (돈·LV.MAX 무색조각)
   // highOver40 'on': 돈으로는 41강(LV.MAX)이 40강(LV.2, 구간 배수)보다 적어도, 사냥터 40강 이하 자리가 남았으면 넣음 (T.018 허수아비 둘레 수)
   const lowSlotsLeft = () => { let lo = 0, hi = 0; for (const x of S.hunt) if (x <= 40) lo++; for (const x of S.pad) if (x >= 41) hi++; for (const x of S.incoming) if (x >= 41) hi++; return lo > hi; };
-  const fillHigh = lv => !autoOn() && P.fillHighFrom > 0 && lv >= P.fillHighFrom && lv <= P.fillHighTo && lv < GOAL && (value(lv) > thr() || (P.highOver40 === 'on' && lv >= 41 && lowSlotsLeft()));
+  const fillHigh = lv => !autoOn() && P.fillHighFrom > 0 && lv >= P.fillHighFrom && lv <= P.fillHighTo && lv < GOAL && (value(lv) > thr() || (lv >= 41 && lowSlotsLeft()));
   // ----- 파방·확률 판단 (climbRule 'auto'): 40~48강 유닛을 지금 사냥터에 넣을지, 더 강화할지 -----
   // 예전엔 고정 규칙(40강은 사냥터 하위 칸보다 좋으면 바로 넣음, 44~48강은 나오는 대로 넣음)이었는데, 파방이 높고 확률이 좋으면 40→44, 45→48까지 그냥 올리는 게 낫다.
   // 지금 넣으면 G(lv) = value(lv) − 사냥터 가장 약한 칸(안 찼으면 0). 계속 강화하면 E(lv) = 성공 확률(원확률 + 파방 재시도) × G*(lv+1), G* = 그 강에서 더 나은 쪽.
@@ -700,7 +701,9 @@ function run(P0, seed, wantLog, ext){
   // ----- 판매 · 뽑기 · 무색조각 -----
   function addShards(x){ S.shards += x; S.shTot += x; if (S.shards >= S.gemNeed){ S.gemDirty = true; S.wake = true; } }
   // 뽑기 배수 (합연산, 사용자 확인): 1 + 핫타임 1 + 특별 핫타임 3 + 45~50강 판매 2배 쿠폰 1 + 멀티 보너스 1
-  const pullMult = () => 1 + (S.t < S.hotUntil ? 1 : 0) + (S.t < S.spHotUntil ? 3 : 0) + (S.t < S.sell2xUntil ? 1 : 0) + (P.multiBonus === 'on' ? 1 : 0);
+  // 멀티 보너스: 그 판 인원이 2명 이상일 때만 (사용자 2026-10-12 「1인은 멀티 보너스 못 받음」) — multiBonus auto = 인원으로 · on/off = 강제
+  const multiOn1 = () => P.multiBonus === 'on' || (P.multiBonus !== 'off' && fiMultNow() >= 2);
+  const pullMult = () => 1 + (S.t < S.hotUntil ? 1 : 0) + (S.t < S.spHotUntil ? 3 : 0) + (S.t < S.sell2xUntil ? 1 : 0) + (multiOn1() ? 1 : 0);
   function expShards(lv, M){ const g = GACHA[lv]; let s = g.base; for (const [k, amt, pr] of g.rw) if (k === 'sh') s += amt * pr / 100; return s * M * SUP_SHARD; }
   function gachaRoll(lv){ // 1기 뽑기: 한 번 굴려 한 줄만 당첨(판매_뽑기 표), 결과 전체에 배수
     const g = GACHA[lv], M = pullMult(); let sh = g.base, aw = 0, cr = 0, u = R() * 100;
@@ -746,7 +749,6 @@ function run(P0, seed, wantLog, ext){
     if (ml && lv < ml) return false;
     if (P.sellMode !== 'value') return false;
     if (lv <= 48 && (lowSellOff1() || lowSellNotYet())) return false;
-    if (lv === 49 && /^(n50|none)/.test(String(P.sell49Force || '')) && S.first50T === null) return false;   // sell49Force n50: 첫 50강까지 49강 안 팜 (뒤 단계와 같은 규칙)
     if (sellDirty || pullMult() !== sellM) rebuildSell();
     if (SELLIT[lv] !== 1) return false;
     const ok = lv <= 48 ? canSellLow() : canSell();
@@ -852,7 +854,7 @@ function run(P0, seed, wantLog, ext){
   }
   // 먼저 살 보석 (경험·숙련·성취 등, 목록 순서·목표 개수): 다음 1개 값 = 남겨 둘 무조 (「모음」일 때)
   function nextFirstGem(){ for (const [k, tg] of P.gemFirst1Arr){ if (S.gems[k] < Math.min(tg, GEMS[k].max)) return k; } return null; }
-  function firstReserve(){ if (P.gemFirstMode1 !== 'reserve') return 0; const k = nextFirstGem(); return k ? GEMS[k].cost(S.gems[k] + 1) : 0; }
+  function firstReserve(){ return 0; }   // 먼저 살 보석: 살 수 있을 때만 (남겨 두고 모으기는 +0.35h라 없앰)
   function buyFirstGems(){
     const parts = []; let any = false;
     for (const [k, tg] of P.gemFirst1Arr){
@@ -935,8 +937,8 @@ function run(P0, seed, wantLog, ext){
   // 사냥터가 40강 이상으로 가득 차서 이제 40강을 강화하는 때 (판마다 한 번 기록)
   function p40(){
     if (S.p40T != null) return true;
-    // fill40 'off' (40강 풀 건너뛰기): 40강을 사냥터에 안 채우니 그 판에서 40강이 나오자마자 「40강을 강화하는 때」 (사용자 안 2026-10-09)
-    if ((P.fill40 === 'off' || lv2Stopped()) && S.reached[40] && GOAL > 40 && !blockedAt(40)){ S.p40T = S.t; if (S.p40First == null) S.p40First = S.t; if (log) L('40강 풀 건너뜀 — 40강이 나오자마자 강화 (사냥터는 41강으로 바로)'); return true; }
+    // LV.2 사냥터 멈춤(lv2StopDps): 40강을 사냥터에 안 채우니 그 판에서 40강이 나오자마자 「40강을 강화하는 때」
+    if (lv2Stopped() && S.reached[40] && GOAL > 40 && !blockedAt(40)){ S.p40T = S.t; if (S.p40First == null) S.p40First = S.t; if (log) L('40강 풀 건너뜀 — 40강이 나오자마자 강화 (사냥터는 41강으로 바로)'); return true; }
     if (S.cap >= 48 && S.hunt.length >= S.cap && S.hunt.every(x => x >= 40)){ S.p40T = S.t; if (S.p40First == null) S.p40First = S.t; if (log) L('사냥터가 40강 이상으로 가득 — 이제 40강을 강화'); return true; }
     return false;
   }
@@ -1153,7 +1155,7 @@ function run(P0, seed, wantLog, ext){
     for (const [p, h] of pairs){ a.inn[p] = (a.inn[p] || 0) + 1; a.out[h] = (a.out[h] || 0) + 1; }
     if (ups) for (const lv of ups) a.up[lv] = (a.up[lv] || 0) + 1;
   }
-  const placeable = lv => !(lv >= 41 && collectingHigh()) && !(lv2Stopped() && lv >= 26 && lv <= 40) && !holdAbove(lv) && ((P.past50 && lv === GOAL) || P.fillHighFrom > 0 && lv >= P.fillHighFrom && lv <= P.fillHighTo || (autoOn() && lv >= 40 && lv <= P.fillHighTo) || !(lv >= 40 && lv >= P.keepFrom && !blockedAt(lv) && !(lv === 40 && P.fill40 === 'on')));   // 통합: 50강도 사냥터에
+  const placeable = lv => !(lv >= 41 && collectingHigh()) && !(lv2Stopped() && lv >= 26 && lv <= 40) && !holdAbove(lv) && ((P.past50 && lv === GOAL) || P.fillHighFrom > 0 && lv >= P.fillHighFrom && lv <= P.fillHighTo || (autoOn() && lv >= 40 && lv <= P.fillHighTo) || !(lv >= 40 && lv >= P.keepFrom && !blockedAt(lv) && lv !== 40));   // 통합: 50강도 사냥터에
   function planPlacement(){
     const base = S.rate;
     // 보스 먼저: 개인 보스 판정은 LV.1 DPS라서, 다음 보스 목표에 모자라면 25강 이하를 먼저 넣음 (꽉 차 있으면 가장 약한 유닛과 교체)
@@ -1183,8 +1185,8 @@ function run(P0, seed, wantLog, ext){
       if (chosen.length) return {k:'place', lvs:chosen, dur:P.autoHunt === 'on' ? 0 : P.placeSec};   // autoHunt: 사냥터 입구 유닛은 자동사냥으로 바로 들어감 (손 시간 0)
     }
     // highOver40: 발판의 41강↑을 사냥터의 가장 낮은 40강 이하와 먼저 바꿈 (돈이 줄어도) — 빠진 40강은 다시 강화
-    const noHiOut = (pl, hl) => P.highOver40 === 'on' && hl >= 41 && pl <= 40;
-    if (P.highOver40 === 'on'){
+    const noHiOut = (pl, hl) => hl >= 41 && pl <= 40;
+    {
       const hi = S.pad.filter(lv => lv >= 41 && lv < GOAL && placeable(lv)).sort((a, b) => b - a), lo = S.hunt.filter(lv => lv <= 40).sort((a, b) => a - b), pairs = [];
       for (let i = 0; i < Math.min(hi.length, lo.length, Math.max(1, P.swapBatch || 1)); i++) pairs.push([hi[i], lo[i]]);
       if (pairs.length) return {k:'swapN', pairs, dur:swapDur(pairs.length)};
@@ -1301,8 +1303,8 @@ function run(P0, seed, wantLog, ext){
       case 'unique': S.uniqueIn = true; recalcRate(); L('고유유닛 사냥터 입장'); break;
       case 'setup': {
         S.setupDone = true; S.vendOn = true; S.machineFree = [S.t, S.t];
-        L(S.rerolls ? '시작 세팅: 자동구입·자동강화 다시 켜기' : '시작 세팅: 미션 1 받기, 자동구입·자동강화' + (P.internalFrom === 'start' ? '·내부계산' : '') + ' 켜기');
-        if (P.internalFrom === 'start' && S.internalAt === null) S.internalAt = S.t;
+        L(S.rerolls ? '시작 세팅: 자동구입·자동강화 다시 켜기' : '시작 세팅: 미션 1 받기, 자동구입·자동강화' + '·내부계산' + ' 켜기');
+        if (S.internalAt === null) S.internalAt = S.t;
         // 엑보에 36강 넣기: 고유유닛만으로 36강 값(8백조)을 금방 모을 수 있으면 자동구입을 잠깐 끄고 모아서 36강을 바로 산다
         if (P.fiPick === '36' && !S.fiLv && S.fiTarget <= 36 && S.rate > 0 && (FI_PICK_PRICE - S.money) / S.rate <= P.fiPickWait){
           S.fiPicking = true; S.vendPaused = true; schedulePick();
@@ -1530,27 +1532,31 @@ const UD = [null,
   ['보통',80,1,18800],['보통',150,1,30000],['매우느림',700,1,50000],['보통',350,1,100000],['느림',1200,1,160000],['느림',750,3,500000],['보통',2000,1,800000],['보통',4000,1,1200000],['빠름',3500,1,2000000],['매우빠름',4000,1,5000000],
   ['매우느림',40,1,12000000],['느림',70,1,30000000],['보통',120,1,160000000],['빠름',400,1,800000000],['느림',2500,1,0],['보통',2800,1,0],['빠름',3400,1,0],['극한',6550,1,0],['초월',6550,1,0],['무한',6550,2,0]];
 // 51~56강 (강화_유닛 표): 기본 공격력 · 24프레임당 광산 타수(54강 실측 2.00, 나머지는 24/쿨타임)
-const U5 = {51:{atk:30, hit:1}, 52:{atk:200, hit:0.5}, 53:{atk:350, hit:1}, 54:{atk:700, hit:2}, 55:{atk:14400, hit:0.5}, 56:{atk:30000, hit:1}, 57:{atk:1500000, hit:1}};   // 57강 150만 · 광산 24프레임당 1타 (사용자 실측 2026-10-09)
+const U5 = {51:{atk:30, hit:1}, 52:{atk:200, hit:0.5}, 53:{atk:350, hit:1}, 54:{atk:700, hit:2}, 55:{atk:14400, hit:0.5}, 56:{atk:30000, hit:1}, 57:{atk:1500000, hit:1}, 58:{atk:15000000, hit:1}, 59:{atk:37373737, hit:2}};   // 57강 150만 · 광산 24프레임당 1타 (사용자 실측 2026-10-09) · 58강 1,500만 1타 · 59강 3,737만 2타 (강화_유닛 표 · 계산기 MINE_HIT_RATE)
+// 57~59강 표기 공격력 D = 기본 × (1 + 신위 1/개) × (10 + 멀티 3 + 힘(57)·지위(58)·권력(59) 1/개) / 10 (계산기 「표기 공격력」, 무구 크리스탈·진 각성·창조는 이 시뮬에 없음)
+const ORB_ATK = {57:'power', 58:'status', 59:'might'};
 const BUY = {1:1500, 7:4e4, 11:7e5, 15:8e6, 18:1e8, 20:6e8, 22:3.5e9, 24:2e10, 26:1e11, 28:6e11, 30:3.5e12, 32:2e13, 34:1.2e14, 36:8e14, 37:6e15, 38:5e16, 39:8e17, 40:1e19,
   41:1.1068046444e20, 42:4e20, 43:2.5e21, 44:1.5e22, 45:1e23, 46:5e23};   // 47강 이상 미입력 (계산기와 같음)
 const BUY_LV = Object.keys(BUY).map(Number).sort((a, b) => a - b);
-const VEND_PAIRS = (() => { const p = [[0, 0]]; let lo = 0; BUY_LV.forEach(lv => { p.push([lo, lv]); p.push([lv, lv]); lo = lv; }); return p; })();
 // 자판기 49강 묶음·51~54강 (계산기 VEND_MENU_HI · UNIT_BUY_PRICE 51~54, 2026-10-07·09 스샷) — [강, 기수, 한 번 구매 총액]. 50강 묶음은 각성용이라 뺌, 54강×24 배율은 미확인이라 뺌.
 // 한 번 사면 기수만큼 들어오고 1프레임에 촉진만큼 삼 → 초당 개수 = 초당 구매 × 기수, 초당 비용 = 초당 구매 × 총액 (돈 수입이 못 대면 그 칸은 못 삼 — 사용자 「촉진 × 가격이 돼야 산다」)
 const VEND_HI = [[49,2,3e24],[49,4,1e26],[51,1,1e26],[49,12,5e27],[52,1,5e27],[53,1,1e29],[53,2,2.5e30],[54,1,5e31],[54,2,1e33],[54,5,9e33],[54,8,8e34],[54,12,7.1e35],[54,16,5e36],[54,20,4e37],[54,24,2 ** 128]];
 const OFFERS_HI = BUY_LV.map(lv => ({lv, n:1, price:BUY[lv]})).concat(VEND_HI.map(([lv, n, price]) => ({lv, n, price}))).sort((a, b) => a.price - b.price || a.lv - b.lv || a.n - b.n);
 const PAIRS_HI = (() => { const p = [[-1, -1]]; let lo = -1; OFFERS_HI.forEach((o, i) => { p.push([lo, i]); p.push([i, i]); lo = i; }); return p; })();
-function climbHi(money, u1, u2){   // climb과 같은 사다리 (자판기 2가 먼저 한 칸 위, 그다음 1), 칸 = 묶음 포함 구매 후보
+const I49x12 = OFFERS_HI.findIndex(o => o.lv === 49 && o.n === 12), I51 = OFFERS_HI.findIndex(o => o.lv === 51 && o.n === 1), I52 = OFFERS_HI.findIndex(o => o.lv === 52 && o.n === 1);
+function climbHi(money, u1, u2, v49, v51, n49, n12){   // n12: 자판기 52강 자리를 같은 값 49강 12기로(단수 몰기) · n49: 49강 12기 자리를 52강으로(단수 안 함)   // v49(융합 뒤): 자판기 2가 52강 대신 같은 값 49강 12기 묶음 (사용자 2026-10-13: 단수 올릴 땐 이 묶음)   // 사다리: 자판기 2가 먼저 한 칸 위, 그다음 1 (자판기 2가 먼저 한 칸 위, 그다음 1), 칸 = 묶음 포함 구매 후보
   const pr = i => i >= 0 ? OFFERS_HI[i].price : 0, cost = (a, b) => pr(a) * u1 + pr(b) * u2;
   let bi = 0; for (let i = 0; i < PAIRS_HI.length; i++){ if (cost(PAIRS_HI[i][0], PAIRS_HI[i][1]) <= money) bi = i; else break; }
   const best = PAIRS_HI[bi], bc = cost(best[0], best[1]), nx = PAIRS_HI[bi + 1];
+  // 51/51 ~ 52/52 사이 남는 돈은 다음 칸(같은 값 49강 12기, 52강보다 앞)으로 감 = 단수 — 52강으로 돌리면 첫 60강 +15.1±1.5h(2026-10-14, 특급 171 상태 32판, 단수가 안 올라 53강 칸에 못 닿음)
+  const sw = (i, vi) => { if (n12 && i === I52) return I49x12; if (n49 && i === I49x12) return I52; if (vi !== 1 || i < 0) return i; const o = OFFERS_HI[i]; if (v49 && o.n === 1 && o.lv === 52) return I49x12; if (v51 !== false && o.n === 4 && o.lv === 49) return I51; return i; };   // 자판기 2는 49강 4기 묶음 대신 같은 값(100자) 51강 (사용자 2026-10-13: 51강↑ 생산은 51강, 단수는 49~50강 — 지금 상태 24판 60강 기대 119.7 → 113.7h)
   const st = {}; const add = (i, r) => { if (i >= 0 && r > 0){ const o = OFFERS_HI[i]; st[o.lv] = (st[o.lv] || 0) + r * o.n; } };
   let mix = null;
   if (nx){ const di = nx[0] !== best[0] ? 0 : 1, from = best[di], to = nx[di], uu = di ? u2 : u1;
     const delta = uu * (pr(to) - pr(from)), surplus = money - bc;
     if (delta > 0 && surplus > 0) mix = {di, from, to, r: Math.min(1, surplus / delta)}; }
-  if (mix){ const sIdx = mix.di === 0 ? 1 : 0; add(best[sIdx], sIdx ? u2 : u1); const um = mix.di ? u2 : u1; add(mix.from, um * (1 - mix.r)); add(mix.to, um * mix.r); }
-  else { add(best[0], u1); add(best[1], u2); }
+  if (mix){ const sIdx = mix.di === 0 ? 1 : 0; add(sw(best[sIdx], sIdx), sIdx ? u2 : u1); const um = mix.di ? u2 : u1; add(sw(mix.from, mix.di), um * (1 - mix.r)); add(sw(mix.to, mix.di), um * mix.r); }
+  else { add(sw(best[0], 0), u1); add(sw(best[1], 1), u2); }
   const lvOf = i => i >= 0 ? OFFERS_HI[i].lv + (OFFERS_HI[i].n > 1 ? OFFERS_HI[i].n / 100 : 0) : 0;
   return {a: lvOf(best[0]), b: lvOf(best[1]), mix, streams: st};
 }
@@ -1571,9 +1577,10 @@ const SUP = {condAdd:400, condFin:5, expFin:20, exAdd:200, exFin:15, shAdd:300, 
 const STAT_DEF = {'1_1':[100,100],'1_2':[100,20],'1_3':[100,10],'1_4':[50,200],'1_5':[30,1000],'1_6':[100,500],'2_1':[50,1000],'2_2':[20,2500],'2_3':[10,5000],'2_4':[50,1000],
   '2_5':[300,250],'2_6':[100,1000],'3_1':[100,1000],'3_2':[100,2000],'3_3':[100,3000],'3_4':[100,4000],'3_5':[200,10000],'3_6':[2074,20000],'4_1':[100,300]};   // [최대, 1회 비용]
 const EX_DEF = {'5_1':[100,50],'5_2':[200,1],'5_3':[200,2],'5_4':[200,4],'5_5':[200,6],'5_6':[200,8],
-  '6_1':[100,1],'6_2':[100,2],'6_3':[100,4],'6_4':[100,6],'6_5':[100,8],'6_6':[100,10],'7_1':[160,200],'7_2':[300,200],'7_3':[100,250],'7_4':[100,2000],'7_5':[100,3000],'7_6':[200,500]};   // 7_4·7_5 = 57·58강 +0.1%p, 7_6 = 응축된 무색 조각 획득량 +1%p (응무조 단계에서만 값이 있음)   // 7_3 = 추가 융합 확률 +0.1%p (융합 목표일 때만 값이 있음)
+  '6_1':[100,1],'6_2':[100,2],'6_3':[100,4],'6_4':[100,6],'6_5':[100,8],'6_6':[100,10],'7_1':[160,200],'7_2':[300,200],'7_3':[100,250],'7_4':[100,2000],'7_5':[100,3000],'7_6':[200,500],
+  '8_1':[40000,50000],'8_2':[40000,50000],'8_3':[200,20000]};   // 8쪽(사용자 2026-10-12: 언제든 찍을 수 있음): 자판기 1·2 촉진 +1,000/회 · 광산 크레딧 채취효율 +1%p/회(최종 곱)   // 7_4·7_5 = 57·58강 +0.1%p, 7_6 = 응축된 무색 조각 획득량 +1%p (응무조 단계에서만 값이 있음)   // 7_3 = 추가 융합 확률 +0.1%p (융합 목표일 때만 값이 있음)
 const EX_PROB_KEYS = ['5_1','5_2','5_3','5_4','5_5','5_6','7_1','7_2','7_3','7_4','7_5','7_6'];
-const EX_NAME = {'5_1':'초월확률','5_2':'51강','5_3':'52강','5_4':'53강','5_5':'54강','5_6':'55강','6_1':'51공업','6_2':'52공업','6_3':'53공업','6_4':'54공업','6_5':'55공업','6_6':'56공업','7_1':'54강2','7_2':'55강2','7_3':'융합','7_4':'57강','7_5':'58강','7_6':'응무조'};
+const EX_NAME = {'5_1':'초월확률','5_2':'51강','5_3':'52강','5_4':'53강','5_5':'54강','5_6':'55강','6_1':'51공업','6_2':'52공업','6_3':'53공업','6_4':'54공업','6_5':'55공업','6_6':'56공업','7_1':'54강2','7_2':'55강2','7_3':'융합','7_4':'57강','7_5':'58강','7_6':'응무조','8_1':'자판기1 촉진','8_2':'자판기2 촉진','8_3':'광산 채취효율'};
 // 52~56강 판매 (판매_뽑기 표): 크리스탈 조각·초월 EXP 기본 지급, 상자 [등급, 확률%] (한 굴림 한 줄)
 const EX_SALE = {52:{sh:1, exp:500, box:[['N',3]]}, 53:{sh:12, exp:8000, box:[['R',1],['N',7]]},
   54:{sh:300, exp:1e5, box:[['G',0.002],['U',0.1],['R',4],['N',18]]}, 55:{sh:2000, exp:1.4e6, box:[['G',0.01],['U',1],['R',30],['N',50]]},
@@ -1584,7 +1591,7 @@ const LOW_SELL_CR = 100, EX_SELL_CR = 1000;   // T.020 판매가: 45~50강 100 (
 const GEN44_SALE = 8e9, GEN44_FAIL = 8e8;   // T.020 (건의 #27·#28): 45~60강 판매·45~59강 파괴 실패도 44강 일반 경험치 — 판매 = 표값 8억 × 10, 실패 = 8억 (배수 expMult 전, 하락하는 54·55강은 없음)
 // 50강 판매 뽑기 (판매_뽑기 표): 기본 무색 조각 1천만 + 한 줄 [종류, 개수, 확률%] — 뽑기 배수가 전부에 붙음 (각성의 보석 잭팟 10만 · 10% 당첨 200)
 const G50 = {base:1e7, rows:[['c',15e4,0.002],['s',8e11,0.002],['a',1e5,0.002],['a',200,10],['s',1e9,15],['c',20,35]]};
-const FIRST_CR = {40:1e4,41:16000,42:25000,43:40000,44:63000,45:1e5,46:160000,47:250000,48:4e5,49:630000,50:1e6,51:250000,52:416666,53:583333,54:750000,55:1e6,56:1333333};
+const FIRST_CR = {40:1e4,41:16000,42:25000,43:40000,44:63000,45:1e5,46:160000,47:250000,48:4e5,49:630000,50:1e6,51:250000,52:416666,53:583333,54:750000,55:1e6,56:1333333,57:1666666,58:2500000,59:3333333,60:8333333};
 const FIRST_SH = {45:2500,46:1e4,47:2e5,48:5e5,49:2e6,50:37373737};
 const FIRST_EXP = {20:500,22:7000,24:20000,26:80000,34:2e6,35:3.2e6,36:1e7,37:1.6e7,38:2.4e7,39:4e7,40:1e8};
 // 첫 달성 보상은 성취의 보석 0개 값. T.013: 크레딧·경험치에 각성 자릿수 ×1.5ⁿ, 어느 단계를 뽑으면 아직 안 받은 아래 단계(20강~)도 한꺼번에 받는다(제보 #74).
@@ -1600,7 +1607,10 @@ const CRY_BY = {}; CRY.forEach(c => { CRY_BY[c.k] = c; });
 const COST10 = [1,3,5,7,10,13,17,22,30,40], COST20 = COST10.concat([1000,4000,10000,20000,33000,50000,100000,300000,500000,1000000]);
 // 레벨 L을 갖는 데 필요한 총 개수 (제작한 1개는 +0, 강화해야 +1 — 사용자 확인)
 const NEED10 = [1], NEED20 = [1]; COST10.forEach((c, i) => NEED10.push(NEED10[i] + c)); COST20.forEach((c, i) => NEED20.push(NEED20[i] + c));
-const DISASM = {N:3, R:100, U:1e4, G:0};
+const DISASM = {N:3, R:100, U:1e4, G:0, Q:0};
+// 퀘이사 크리스탈 (크리스탈.csv 21~28 · 크리스탈_강화비용 표) — 57~59강 판매 · 엑보의 퀘이사 상자에서만(상자 1개 = 8종 중 하나 같은 확률, 같은 8칸에 장착 — 사용자 2026-10-13). 상급 조각 제작은 안 넣음
+const NEEDQ20 = [1]; COST10.concat([250, 850, 2530, 5690, 10360, 21130, 46500, 100500, 235800, 500000]).forEach((c, i) => NEEDQ20.push(NEEDQ20[i] + c));
+[['c21','길운',10],['c22','무구',20],['c23','집중',10],['c24','절제',10],['c25','탐욕',20],['c26','증식',10],['c27','미래',20],['c28','돌파',20]].forEach(([k, name, max]) => { const c = {k, g:'Q', name, max, craft:Infinity, need:max === 10 ? NEED10 : NEEDQ20}; CRY.push(c); CRY_BY[k] = c; });
 // 보석 비용 (계산기 GEM_COST_DEFS 확정식). n = 몇 번째 1개
 const cubic = k => n => k * (3 * n * n - 3 * n + 1);
 function lastFix(f, max, total){ let s = 0; for (let i = 1; i < max; i++) s += f(i); const last = total - s; return n => n < max ? f(n) : last; }
@@ -1628,41 +1638,66 @@ const ORBC = {
   low:{max:100, f:n => 1 + n}, mid:{max:100, f:n => 1 + 3 * n}, high:{max:100, f:n => 1 + 5 * n},
   save:{max:1500, f:n => n <= 1000 ? 2 * n + 10 : 10 * n * n - 5000 * n + 2010}, sp:{max:500, f:n => 1 + 7 * n}, pr:{max:1000, f:n => 1 + 10 * n},
   exp:{max:1000, f:n => 4 * n}, power:{max:500, f:n => 1 + n}, mine:{max:100, f:n => Math.round(Math.pow(1.85926490062354264485, n - 1))},
-  eon:{max:1000, f:n => 1e6 - 1 + Math.floor(Math.pow(n, 3.7))}, fate:{max:2000, f:n => 1e7 - 1 + Math.floor(Math.pow(n, 3.9))}};
+  eon:{max:1000, f:n => 1e6 - 1 + Math.floor(Math.pow(n, 3.7))}, fate:{max:2000, f:n => 1e7 - 1 + Math.floor(Math.pow(n, 3.9))},
+  // 2026-10-12 추가 (보석.csv · 계산기 GEM_COST_DEFS): 지위·권력(58·59강 공격력 +10%/개) · 신위(51~59강 기본 공격력 +100%/개) · 절명(51~59강 크리 +0.1%/개) · 폭식(돈 +0.1배/개) · 성운·천운(57·58강 +0.02%p) · 무위(59강 +0.001%p)
+  status:{max:500, f:n => Math.min(1000, 20 * n + 20)}, might:{max:500, f:n => 1 + 3 * n * n},
+  divine:{max:1000, f:n => n === 1 ? 1e8 : 100000 * n ** 4 - 180000 * n ** 3 + 171000 * n * n - 81000 * n + 1000015333},
+  crit:{max:500, f:n => n * n * n}, glut:{max:1000, f:n => n ** 5 + 9999999},
+  nebula:{max:2000, f:n => 1e8 - 1 + Math.floor(Math.pow(n, 4.4))}, heaven:{max:2000, f:n => 1e9 - 1 + Math.floor(Math.pow(n, 4.7))},
+  void:{max:100, f:n => { let c = 1e16; for (let i = 1; i < n; i++) c += 1e16 * Math.pow(2, Math.floor(i / 10)); return c; }}};
 // 하급·중급 = 54·55강 +0.1%p · 상급 = 융합 +0.05%p · 절약 = 융합 필요 −10 · 특급 = 57강 +0.02%p · 고급 = 58강 +0.01%p · 경험 = 초월 EXP +100% · 힘 = 57강 공업 +1 · 채광 = 광산 크레딧 ×1.1 · 영겁 = 54·55강 +0.03%p · 명운 = 융합 +0.02%p
-const ORB_NAME = {low:'하급', mid:'중급', high:'상급', save:'절약', sp:'특급', pr:'고급', exp:'경험', power:'힘', mine:'채광', eon:'영겁', fate:'명운'};
+const ORB_NAME = {low:'하급', mid:'중급', high:'상급', save:'절약', sp:'특급', pr:'고급', exp:'경험', power:'힘', mine:'채광', eon:'영겁', fate:'명운', status:'지위', might:'권력', divine:'신위', crit:'절명', glut:'폭식', nebula:'성운', heaven:'천운', void:'무위'};
+const ORB_PROD = ['power','status','might','divine','crit','glut'];   // 생산(돈 → 자판기)에 붙는 보주: 효율은 시간당 50강(prodCalc)으로 잼
+// 엑스트라 보스 줄 (계산기 PR_FI · 화면 실측): [누적 타수, ExPoint 기본, {cr 크레딧, sup 후원 몫(LV.12↑), shard 크리스탈 조각, N·R·U 상자, adv 상급 크리스탈 조각, q 퀘이사 상자, gal 은하의 조각}]
+// 묶음(해금 단위, README): 0 만(5,000만까지) · 1 억 · 2 조 · 3 경 · 4 해 · 5 자(약 1자 한 줄) — 정식 출시 뒤 하루에 한 묶음씩 열림(날짜는 판을 시작한 때, 7일째부터 멈춤 없음). 약 1자가 마지막 줄(2026-10-12 화면 목록)
+const FI_LINES = (() => { const L = [], add = (n, ex, o) => L.push(Object.assign({n, ex, grp: n < 1e8 ? 0 : n < 1e12 ? 1 : n < 1e16 ? 2 : n < 1e20 ? 3 : n < 1e24 ? 4 : 5}, o || {}));
+  add(5000, 500, {cr:5e4, sup:1e4}); add(25000, 2500, {cr:2e5, sup:3e4});
+  for (let k = 1; k <= 10; k++) add(373737 * k, 30);
+  add(5e6, 100); add(1e7, 200, {shard:1}); add(2.5e7, 300, {shard:2}); add(5e7, 500, {shard:3});
+  add(1e8, 750, {shard:5}); add(2e8, 1000, {N:1, shard:10}); add(5e8, 2000, {N:3, shard:30}); add(1e9, 3000, {N:5, shard:50}); add(2e9, 4000, {N:7, shard:70}); add(3e9, 5000, {N:10, shard:100});
+  add(4e9, 7000, {R:1, shard:150}); add(8589934592, 1e4, {R:2, shard:200}); add(21474836480, 3e4, {R:4, shard:500}); add(42949672960, 5e4, {R:6, shard:800}); add(1e11, 1e5, {R:10, shard:1500});
+  add(1e12, 2e5, {U:1}); add(1e13, 3e5, {U:7}); add(1e14, 4e5, {adv:1}); add(1e15, 5e5, {adv:3});
+  add(1e16, 1e6, {q:1}); add(5e16, 1e6, {q:3}); add(1e17, 1e6, {q:10}); add(5e17, 1e6, {adv:100}); add(1e18, 1e6, {gal:1}); add(5e18, 1e6, {gal:3}); add(1e19, 1e6, {gal:5}); add(5.55e19, 2e6);
+  add(1.15e20, 3e6); add(3e20, 4e6); add(5e20, 5e6); add(1e21, 6e6); add(2.5e21, 7e6); add(6e21, 8e6); add(1.5e22, 9e6);
+  add(4.5e22, 1e7); add(9e22, 1.1e7); add(1.5e23, 1.2e7); add(3.2e23, 1.3e7); add(5e23, 1.4e7); add(7.5e23, 1.5e7); add(1e24, 1.6e7);   // 해 묶음 끝 · 약 1자가 마지막 줄 (화면 목록, 지급 미확인)
+  return L; })();
 const GEM_BUY = ['wealth','accel','guard','protect','ultimate','transcend','low','mid','high','special','premium','patience','hostile'];   // 적대 추가 (2026-10-10: 빠져 있어서 앞 단계에서 100을 못 채우면 뒤 단계에서 영영 안 샀음)
 
 const DEFAULTS = {
   goal:56, runs:24, seed0:1, maxHours:3000, dt:60,
   // 통합: 목표 = 우주 크리스탈 +goalCry (0이면 목표 강 첫 달성에서 끝) · 시작 방식 · 판매 판단 시간 · 사냥터 최고 강 · 특수확률 쿠폰 · 엑보 기다림
-  // 목표 = 한 판에 57강 48기 (사용자 2026-10-10), 그 뒤 응무조 단계 30시간. 48기 판 75시간 시작(60h보다 48기 +1.1h, 그 뒤 응무조 29시간 45.6만 vs 29.3만) · 광산 48칸 · 50강은 우주 +10까지 판단(β 0.5), 그 뒤 광산이 차 있으면 끝까지 판매 sell50Force post(처음부터 늘 대비 −3.4h · 단수 3천만에서 멈추면 +10.6h) · 49강은 판단(늘 판매 +25.7h, 크레딧이 모자람). 우주 +10 목표는 fuseGoal 0
-  startMode:'fresh', vendHi:'on', discAdd:0, exResetRoom:'off', resetSec:120, fuseGoal:48, fuseFrom:'h75', fuseRoom:'never', fuseSell:'push', fuseExReset:'on', condHours:30, condPush:'auto', orbMode:'auto', orbOrder:'', orbExpH:10, condStat:'', saleHorizonH:1, hgMaxStage:50, specCoupon:'on', fiWait:300, gemFirstMode:'free', rebootMaxMin:60, rbNeed25k:'on', rbLv:50, rbDps:0, rbExtraMin:8, rbBurst:0, rbLongMin:60, m40Later:'nextRoom', m40Sec:60, bossPerRoom:'on', goalCry:10, lateRoomMin:60, lateFrom:'f56', mineSlotsLate:0,
-  // 기본 스펙 (시작 상태)
+  // 목표 = 첫 60강 (goal60, 사용자 2026-10-12 — 「한 판에 57강 N기」 목표·그 뒤 응무조 단계는 없앰). 융합은 fuseFrom(기본 75시간)에 시작 · 광산 48칸 · 50강은 우주 +10까지 판단(β 0.5), 그 뒤 광산이 차 있으면 늘 판매(sell50Force post — 융합 중엔 판단대로, sell50Fuse) · 49강은 판단. goal60 off면 우주 크리스탈 +goalCry 또는 목표 강
+  startMode:'fresh', discAdd:0, exResetRoom:'off', resetSec:120, fuseFrom:'x2500', fuseSell:'push', orbExpH:10, saleHorizonH:1, hgMaxStage:50, specCoupon:'on', fiWait:300, rebootMaxMin:60, rbNeed25k:'on', rbLv:50, rbDps:0, rbExtraMin:8, rbEarlyMin:2, rbEarlyEx:15, rbLateMin:2, rbLateT:54, rbLateLv:54, rbLateDps:0, earlyDt:1, dpsMul:1, mineFill:56, mineFillEx:0, mineFillU:10, sleepRoom:'sale', eqSleepOrder:'c20, c18, c5, c10, c15, c19, c14, c17', firstPush:'on', firstPushEx:0, firstPushU:10, firstPushTo:56, exSwitchU:10, fastStartT:54, fastSecA:3, fastSecB:4, rbBurst:0, rbLongMin:60, m40Sec:60, bossPerRoom:'on', goalCry:10, // 기본 스펙 (시작 상태)
   level:20000, awaken:1094, exLv0:1, credits0:1e7, ep0:0, crs0:0, statMode:'opt',
+  // 지정 스펙(지금 내 상태)에서 시작 — 2026-10-12 사용자: 게임 중간에 적어 주면 그 상태로 새 판을 여는 것부터 돌림. 빈칸·0이면 아래 설명대로
+  t0H:0, sh0:0, cs0:0, awg0:0, minePts0:0, adv0:0, race0:'', mission0:0, st0:'', ex0:'', orbs0:'', cp0:'',
   gems:'low:100, mid:100, high:100, special:100, premium:1000, wealth:200, guard:199, ultimate:500, accel:18, protect:4, transcend:15, exp:1000',   // 무조 약 10조 (보호 199개가 9.8조) + 경험 1000(약 1억)
   // 리방
-  reboot:'event', rebootMin:15, rebootSec:45, hgFillSec:15, fiHit:4.17, fiUnit:'auto', fiMult:4, sleepH:0,   // 리방: 엑보 25,000타 + 이 판 50강 첫 달성(판 시작 약 2분) 뒤 8분 더 (2026-10-07 96판: 15분마다보다 −0.11±0.07h, 바로 리방 27h, 56강 때만 456h)
+  reboot:'event', rebootMin:15, rebootSec:4, hgFillSec:2, fiHit:4.17, fiUnit:'auto', fiMult:4, sleepH:0,   // 리방: 엑보 25,000타 + 이 판 50강 첫 달성(판 시작 약 2분) 뒤 8분 더 (2026-10-07 96판: 15분마다보다 −0.11±0.07h, 바로 리방 27h, 56강 때만 456h)
   // 사냥터 · 광산
-  mineSlots:48, mineMinLv:51, mineStep:16, mine2x:'on',   // 광산 단 16 유지 (사용자 2026-10-10: ExPoint가 남아서 광산 포인트는 늘 최대로 — ExPoint 1개 = 1,000점으로 셈하던 때의 값. T.027 표는 1개 = 1점 · 최대 20단이라 다시 정해야 함, 아직 안 돌려 봄)
+  mineSlots:48, mineMinLv:51, mineStep:20, mineFrom:'start', mine2x:'on', mineMode:'auto', mineHoldH:3,   // 광산 포인트(T.027: ExPoint 1 = 1점, 매 프레임 단수만큼 늘 닳음 — 사용자 2026-10-12 「적절한 때 20단」): auto = 가진 ExPoint로 mineHoldH시간 버틸 수 있는 가장 높은 단(최대 mineStep) · fixed = 광산에 유닛이 있으면 늘 mineStep
+  // 엑보 줄 하루 해금 (정식 출시 첫날은 25,000타까지, 둘째 날부터 만 → 억 → 조 → 경 → 해 → 자 묶음을 하루에 하나씩, 날짜는 판을 시작한 때 · 매일 18시) · fiDay0H = 출시 몇 시간 뒤에 레벨 1로 시작했는지 · fiSwapAll = 25,000타 뒤에도 더 높은 강이 나오면 엑보 유닛이 바뀜
+  fiDaily:'on', fiDay0H:0, fiSwapAll:'on',
+  // 목표 첫 60강 (사용자 2026-10-12): 융합으로 57강 → 광산(58·59강은 mine58·mine59기까지 광산에 둠) → 남는 유닛은 팔거나(응무조 → 보주) 위로. sell60 auto = 판매 1기의 응무조로 보주를 사서 sellH시간 동안 늘어나는 60강 기대값이 위로 보낼 때보다 크면 팜
+  goal60:'on', goal60End:'first', mine58:48, mine59:48, sellH:20, room60:'q6', ex8:'on', sell49FuseFrac:0.6, sell49FuseV:0, sell49PreFrac:0.8,
   // ExPoint
-  hot:'on', special:'on', epSpare:'keep', epReserve:20000, spareKeep:0,   // 남는 ExPoint는 모아 둠 (2026-10-07 24판: 크레딧으로 바꿔도 시간 같음 −0.03h, 끝에 EP 약 360만 남음)
+  hot:'on', special:'on', epSpare:'boxNormU', epReserve:20000, spareKeep:0,   // 남는 ExPoint: 행운·경험 +10까지 노말 상자(2026-10-12 2인·T.027 −0.24h), 그 뒤 무조건 모아 둠(광산 — 사용자) · 예전: 모아 둠 (2026-10-07 24판: 크레딧으로 바꿔도 시간 같음 −0.03h, 끝에 EP 약 360만 남음)
   // 판매
-  saleStage:'auto', sell54:'on', sell55:'off', tSwitchU:10, sell50Force:'post', overflow:'attempt', sell50Rule:'judge', tRule:'judge', judgeBias:0.5, pushBias:3, judgeEvery:600, sell50Frac:1, exReserveH:1, lowSellEnd:'never', lowSellReserve:0, lowSellBias:1, lowSellStart:'', sell49:'on', sell49Force:'judge', statReset:'off', wait25kHand:0,   // 45~48강 판매는 처음 48강이 나오면 끝 (2026-10-06 비교: 판단만보다 0.2h 빠름)
+  sell55:'on', sell56:'on', sell55U:14, tSwitchU:20, sell50Force:'post', sell50T:54, sleepAw:'off', sleepOffH:0, sell59H:40, room60Q:4, orbStage:'on', v49Mode:'off', q59Rule:10, aw12:6e8, overflow:'attempt', sell50Rule:'judge', tRule:'judge', judgeBias:0.5, pushBias:3, judgeEvery:600, sell50Frac:1, exReserveH:1, lowSellEnd:'never', lowSellReserve:0, lowSellBias:1, lowSellStart:'', sell49:'on', sell49Force:'preU', statReset:'off', wait25kHand:0,   // 45~48강 판매는 처음 48강이 나오면 끝 (2026-10-06 비교: 판단만보다 0.2h 빠름)
   // 스탯 · 보석 · 크리스탈
-  exTarget:'goal', dpsAtk:'on', gemMode:'auto', gemEvery:600,
-  craftOrder:'c17:10, c3:10, c8:10, c12:10, c14:10, c18:5, c19:5, c20:20, c18:10, c19:10, c4:10, c13:10',   // 각성(c8) +10 일찍 (1~3칸용) · 흑색·백색 +5까지 만들고 우주, 그 뒤 흑·백 +10 (우주 목표 96판: 60분 판·β 0.03과 함께 −2.7h)
+  dpsAtk:'on', gemMode:'auto', gemEvery:600,
+  craftOrder:'c2:10, c17:10, c3:10, c8:10, c12:10, c14:10, c18:5, c19:5, c20:20, c18:10, c19:10, c4:10, c13:10',   // 행운(c2, 노말이라 1개 조각 500)을 먼저 +10 — 2인·T.027 48판 무색 먼저보다 우주 +10 −0.15h · 각성(c8) +10 일찍 (1~3칸용) · 흑색·백색 +5까지 만들고 우주, 그 뒤 흑·백 +10 (우주 목표 96판: 60분 판·β 0.03과 함께 −2.7h)
   eqOrder:'c20, c18, c19, c14, c17, c3, c12, c4, c13, c16, c10, c6, c8, c11, c5, c15, c2, c9, c7, c1',   // 우흑백남 → 무색·경험·초록 (공략 「우흑백남」, v2 비교에서 가장 빠름)
   disasm:'off', prodEvery:600,
   // 먼저 살 보석 · 크리스탈 투트랙
-  gemFirst:'exp:1000, mastery:60, achieve:30', saleEvery:0, bankCredits:'off', cry0:'',
-  eqSaleOrder:'c20, c18, c16, c11, c6, c10, c8, c5, c15, c14', eqBySlot:'3:c17, c3, c2'   // T.020(2026-10-10 96판): 1~3칸 각성 먼저(T.019 기본 '1:c8|2:c17, c8|3:c17, c8, c3')는 +0.10h, 슬롯 3개 무색·경험·행운은 기본 순서보다 −0.43h
+  gemFirst:'exp:1000, mastery:60, achieve:30, patience:1000, achieve:70, transcend:500, protect:400, achieve:100', cry0:'',
+  eqBySlot:'2:c3, c2 | 3:c17, c3, c2 | 7:c20, c18, c19, c17, c8, c11, c16 | 8:c21, c23, c24, c26, c20, c18, c19, c17, c8, c11, c16, c14'   // 8칸(60강 단계): +1 이상인 퀘이사 길운·집중·절제·증식을 먼저(60강 판 리셋 때 낌) · 7·8칸(초월 1,000~)은 남색·경험·초록 대신 각성·노랑·하늘색(각성의 보석) — 2026-10-13 처음부터 24판 60강 기대 122.2 → 118.4h, 초월 1,478 상태 102.8 → 101.4h. 6칸부터 120.0 · 5칸부터 120.3 · 4칸부터 121.0h(손해) · T.020(2026-10-10 96판): 1~3칸 각성 먼저(T.019 기본 '1:c8|2:c17, c8|3:c17, c8, c3')는 +0.10h, 슬롯 3개 무색·경험·행운은 기본 순서보다 −0.43h
 };
 
 function parseList(str, valid){ const out = []; String(str || '').split(/[,\s]+/).forEach(tok => { if (!tok) return; const [k, v] = tok.split(':'); if (valid && !valid[k]) return; out.push([k, v === undefined ? null : Number(v)]); }); return out; }
 function normalize(P0){
   const P = Object.assign({}, DEFAULTS, P0 || {});
-  ['saleHorizonH','fuseGoal','discAdd','resetSec','hgMaxStage','fiWait','rebootMaxMin','rbLv','rbDps','rbExtraMin','rbBurst','rbLongMin','spareKeep','goalCry','lateRoomMin','mineSlotsLate','tSwitchU','goal','runs','seed0','maxHours','dt','level','awaken','exLv0','credits0','ep0','crs0','rebootMin','rebootSec','hgFillSec','fiHit','fiMult','sleepH','mineSlots','mineMinLv','mineStep','epReserve','sell50Frac','exReserveH','lowSellReserve','lowSellBias','wait25kHand','gemEvery','prodEvery','judgeBias','pushBias','judgeEvery']
+  ['saleHorizonH','discAdd','resetSec','hgMaxStage','fiWait','rebootMaxMin','rbLv','rbDps','rbExtraMin','rbEarlyMin','rbEarlyEx','rbLateMin','rbLateT','rbLateLv','rbLateDps','earlyDt','dpsMul','mineFill','mineFillEx','mineFillU','sell49FuseFrac','sell49FuseV','sell49PreFrac','sell55U','sell50T','firstPushEx','firstPushU','exSwitchU','firstPushTo','fastStartT','fastSecA','fastSecB','rbBurst','rbLongMin','spareKeep','goalCry','tSwitchU','goal','runs','seed0','maxHours','dt','level','awaken','exLv0','credits0','ep0','crs0','rebootMin','rebootSec','hgFillSec','fiHit','fiMult','sleepH','mineSlots','mineMinLv','mineStep','epReserve','sell50Frac','exReserveH','lowSellReserve','lowSellBias','wait25kHand','gemEvery','prodEvery','judgeBias','pushBias','judgeEvery','mineHoldH','fiDay0H','mine58','mine59','sellH','t0H','sh0','cs0','awg0','minePts0','adv0','mission0']
     .forEach(k => { P[k] = Number(P[k]); if (!isFinite(P[k])) P[k] = DEFAULTS[k]; });
   P.goal = Math.max(51, Math.min(56, Math.round(P.goal)));
   P.level = Math.max(1, Math.min(300000, Math.floor(P.level)));
@@ -1674,18 +1709,21 @@ function normalize(P0){
   P.dt = Math.max(10, Math.min(600, P.dt));
   P.craftArr = parseList(P.craftOrder, CRY_BY).map(([k, v]) => [k, v == null ? CRY_BY[k].max : Math.min(CRY_BY[k].max, v)]);
   P.eqArr = parseList(P.eqOrder, CRY_BY).map(([k]) => k);
-  P.eqSaleArr = parseList(P.eqSaleOrder, CRY_BY).map(([k]) => k);
+  P.eqSleepArr = parseList(P.eqSleepOrder, CRY_BY).map(([k]) => k);
   // 슬롯 수별 장착 목록 (비교용, eqBySlot = "1:c18,c14 | 2:c18,c14,c17 | …" — 그 슬롯 수일 때 이 목록으로 채움, 없으면 eqOrder)
   P.eqSlotMap = {}; String(P.eqBySlot || "").split("|").forEach(seg => { const m = seg.match(/^\s*(\d+)\s*:(.*)$/); if (m) P.eqSlotMap[+m[1]] = parseList(m[2], CRY_BY).map(([k]) => k); });
   P.gemFirstArr = parseList(P.gemFirst, GEMC).map(([k, v]) => [k, v == null ? GEMC[k].max : v]);
-  P.saleEvery = Math.max(0, Math.round(Number(P.saleEvery) || 0));
   P.cry0Arr = parseList(P.cry0, CRY_BY).map(([k, v]) => [k, Math.max(0, Math.min(CRY_BY[k].max, Math.round(v || 0)))]);
   P.gemObj = {}; parseList(P.gems, GEMC).forEach(([k, v]) => { P.gemObj[k] = Math.max(0, Math.min(GEMC[k].max, Math.floor(v || 0))); });
+  // 지정 스펙: 고유유닛 승급(안 적은 옵션은 최대) · 일반/초월 스탯(빈칸이면 자동) · 보주 · 쿠폰 남은 시간(시간)
+  P.race0Obj = null; if (String(P.race0 || '').trim()){ P.race0Obj = Object.assign({}, RACE); parseList(String(P.race0).toUpperCase(), RACE).forEach(([k, v]) => { P.race0Obj[k] = Math.max(0, Math.min(RACE[k], Math.floor(v || 0))); }); }
+  P.st0Arr = parseList(P.st0, STAT_DEF).map(([k, v]) => [k, Math.max(0, Math.min(STAT_DEF[k][0], Math.floor(v || 0)))]);
+  P.ex0Arr = parseList(P.ex0, EX_DEF).map(([k, v]) => [k, Math.max(0, Math.min(EX_DEF[k][0], Math.floor(v || 0)))]);
+  P.orb0Obj = {}; parseList(P.orbs0, ORBC).forEach(([k, v]) => { P.orb0Obj[k] = Math.max(0, Math.min(ORBC[k].max, Math.floor(v || 0))); });
+  P.cp0Obj = {}; parseList(P.cp0, {hot:1, special:1, exp:1, sell2x:1, spec:1, mine2x:1}).forEach(([k, v]) => { P.cp0Obj[k] = Math.max(0, Number(v) || 0) * 3600; });
   P.gemObjZero = {}; Object.keys(GEMC).forEach(k => { P.gemObjZero[k] = 0; });
   P.raceOrderArr2 = parseList(String(P.raceOrder || '').toUpperCase(), RACE);
-  P.orbOrderArr = parseList(P.orbOrder, ORBC).map(([k, v]) => [k, v == null ? ORBC[k].max : v]);
-  P.condStatArr = parseList(P.condStat, EX_DEF).map(([k, v]) => [k, v == null ? EX_DEF[k][0] : v]);   // 보주 순서 (빈칸 = 효율)
-  P.condHours = Math.max(0, Number(P.condHours) || 0); P.orbExpH = Math.max(0, Number(P.orbExpH) || 0);
+  P.orbExpH = Math.max(0, Number(P.orbExpH) || 0);
   return P;
 }
 
@@ -1720,23 +1758,10 @@ function cryAgg(levels){   // levels: {key: n} (장착한 것만)
     awPct: 100 * (n('c8') + n('c11') + n('c16')) + 200 * n('c18') + Math.min(500 * u, 15000),
     indiv: n('c2') + n('c9') + n('c15') + 2 * n('c19') + 5 * u,
     pab: 0.2 * (n('c7') + n('c11') + n('c14')) + 0.3 * n('c19') + 0.5 * u,
-    hi: Math.max(0, u - 20), critM: 2 + Math.max(0, u - 20)};   // critM: 51~59강 크리티컬 배수 (T.013: 우주 21강부터 1강당 +1배 — 이 시뮬은 우주 +20까지라 늘 2)
+    hi: Math.max(0, u - 20), critM: 2 + Math.max(0, u - 20),
+    gilun: 2 * n('c21'), mugu: 8 * n('c22'), jip: n('c23'), jeol: n('c24'), jeung: n('c26')};   // 퀘이사: 길운 51~53강 +2%p · 무구 57~59강 공업 +8 · 집중 융합 +1%p · 절제 융합 필요 ×0.9(내림) · 증식 자판기 최종 생산 +10% (/Lv)   // critM: 51~59강 크리티컬 배수 (T.013: 우주 21강부터 1강당 +1배 — 이 시뮬은 우주 +20까지라 늘 2)
 }
 const NO_CRY = cryAgg({});
-// 자판기 2대 자동 배정 (계산기 autoClimbVending + getVendingFeedStreams)
-function climb(money, u1, u2){
-  const cost = (a, b) => (a ? BUY[a] * u1 : 0) + (b ? BUY[b] * u2 : 0);
-  let bi = 0; for (let i = 0; i < VEND_PAIRS.length; i++){ if (cost(VEND_PAIRS[i][0], VEND_PAIRS[i][1]) <= money) bi = i; else break; }
-  const best = VEND_PAIRS[bi], bc = cost(best[0], best[1]), nx = VEND_PAIRS[bi + 1];
-  let mix = null;
-  if (nx){ const di = nx[0] !== best[0] ? 0 : 1, from = best[di], to = nx[di], uu = di ? u2 : u1;
-    const delta = uu * ((to ? BUY[to] : 0) - (from ? BUY[from] : 0)), surplus = money - bc;
-    if (delta > 0 && surplus > 0) mix = {di, from, to, r: Math.min(1, surplus / delta)}; }
-  const st = {}; const add = (lv, r) => { if (lv > 0 && r > 0) st[lv] = (st[lv] || 0) + r; };
-  if (mix){ const sIdx = mix.di === 0 ? 1 : 0; add(best[sIdx], sIdx ? u2 : u1); const um = mix.di ? u2 : u1; add(mix.from, um * (1 - mix.r)); add(mix.to, um * mix.r); }
-  else { add(best[0], u1); add(best[1], u2); }
-  return {a: best[0], b: best[1], mix, streams: st};
-}
 // ---- 1~50강 생산 (계산기 computeProductionN40 + computeGemProduction4449와 같은 흐름) ----
 // S: {level, exLv, st, gems, awaken, ex (초월 스탯), C (크리스탈 합), hg (사냥터 Float64Array(57)), mine (광산 열림)}
 const Q_STEPS = [72,48,24,12,6,3,1];
@@ -1747,7 +1772,10 @@ function prodCalc(S){
   const gp = 0.01 * (gm('ultimate') + gm('transcend'));
   const pab = Math.min(PABANG_MAX, (st('2_5') + st('2_6')) * 0.1 + RC.X + gm('guard') * 0.1 + gm('protect') * 0.01 + C.pab);
   const boost = 1 + 10 * st('3_6'), gFin = 1 + 0.01 * Math.min(30, gm('accel')), k5 = Math.min(RACE_VEND_CAP, Math.floor((S.awaken || 0) / 500));   // 촉진의 보석은 합계에 마지막으로 곱함 (최대 30개)
-  const u1 = 24 * Math.floor((boost + Math.floor(k5 / 2)) * gFin + 1e-9) * sp, u2 = 24 * Math.floor((boost + Math.ceil(k5 / 2)) * gFin + 1e-9) * sp;
+  const ex8 = k => (S.ex && S.ex[k]) || 0;   // 초월 8쪽 1·2칸: 자판기 1·2 촉진 +1,000/회 (합계에 더하고 촉진의 보석은 마지막에)
+  const fpm = 1 + 0.1 * (C.jeung || 0), vb = x => Math.floor(Math.floor(x * fpm + 1e-9) * gFin + 1e-9);   // 증식(최종 유닛 생산량): 합계 × 배수 내림 → 촉진의 보석 (계산기 vendBoostOf)
+  const u1 = 24 * vb(boost + Math.floor(k5 / 2) + 1000 * ex8('8_1')) * sp, u2 = 24 * vb(boost + Math.ceil(k5 / 2) + 1000 * ex8('8_2')) * sp;
+  const OB = S.orb || {power:S.power || 0}, ob = k => OB[k] || 0, divM = 1 + ob('divine'), critP = 0.01 + 0.001 * ob('crit');   // 보주: 신위(51~59강 기본 공격력 +100%/개) · 절명(크리 +0.1%/개, 기본 1%)
   // 돈
   const atkSum = 1 + 0.1 * st('1_2') + BOSS15.atk / 100, M = Math.floor(atkSum + 0.5 + 1e-9), tAtk = atkSum * (1 + 0.1 * gm('hostile'));
   const hg = S.hg, mine = S.mine !== false;
@@ -1756,22 +1784,22 @@ function prodCalc(S){
   for (let lv = 41; lv <= 50; lv++){ const c = hg[lv]; if (!c) continue; const u = UD[lv], p1 = pd(u[0], 1, u[2]), full = pd(u[0], u[1], u[2]);
     maxDpsRaw += full * tAtk * c;
     if (mine && p1 * MINE_BASE * M >= full * tAtk * 1e10){ mineTick += c * p1 * MINE_BASE * M; lowHits += c * p1; } else { dpsMax += full * tAtk * c; scareCnt[lv] = c; } }
-  for (let lv = 51; lv <= 57; lv++){ const c = hg[lv]; if (!c) continue; const D = lv >= 57 ? U5[lv].atk * (10 + 3 + (S.power || 0)) / 10 : U5[lv].atk * (10 + ((S.ex && S.ex['6_' + (lv - 50)]) || 0) + C.upg) / 10;   // 57강: 공업은 멀티 +3만(무구·힘 보주 없음)
-    mineTick += c * U5[lv].hit * MINE_BASE * (M + 2 * D * (1 + 0.01 * ((C.critM || 2) - 1))); dps5 += c * D * U5[lv].hit; }   // 크리티컬 1% × critM배 (2D 몫에만)
+  for (let lv = 51; lv <= 59; lv++){ const c = hg[lv]; if (!c) continue; const D = (lv >= 57 ? U5[lv].atk * (10 + (S.multi === false ? 0 : 3) + ob(ORB_ATK[lv]) + (C.mugu || 0)) / 10 : U5[lv].atk * (10 + ((S.ex && S.ex['6_' + (lv - 50)]) || 0) + C.upg) / 10) * divM;   // 57~59강: 공업은 멀티 +3 + 힘·지위·권력 보주(무구 크리스탈 없음)
+    mineTick += c * U5[lv].hit * MINE_BASE * (M + 2 * D * (1 + critP * ((C.critM || 2) - 1))); dps5 += c * D * U5[lv].hit; }   // 크리티컬 (1% + 절명) × critM배 (2D 몫에만)
   // 고유유닛: 공격력 200 + 650W, 쿨타임 Q단계(72·48·24·12·6·3·1프레임, 12·6은 실측 1.92·4.17). 레벨 1만 이상이면 LV.MAX, 아니면 사냥터 위치 D 10이면 LV.2, 그 밖 LV.1
   const qf = Q_STEPS[Math.min(RC.Q, 6)], uHr = qf === 12 ? 1.92 : qf === 6 ? 4.17 : 24 / qf, uDps = (200 + 650 * RC.W) * uHr;
   let uqScare = false;
   if (S.level >= 10000){ maxDpsRaw += uDps * tAtk; if (mine && uHr * MINE_BASE * M >= uDps * tAtk * 1e10){ mineTick += uHr * MINE_BASE * M; lowHits += uHr; } else { dpsMax += uDps * tAtk; uqScare = true; } }
   else if (RC.D >= 10) dpsLv2 += uDps * tAtk; else dpsLv1 += uDps * tAtk;
   const mm = moneyPct(st('1_1'), gm('wealth'), S.awaken || 0);
-  const money = ((dpsLv1 ? dpsLv1 * lv1Mult(dpsLv1) * (1 + 0.01 * st('1_1')) : 0) + (dpsLv2 ? dpsLv2 * lv2Mult(dpsLv2) * 1e5 * (1 + 0.01 * st('1_1')) : 0) + (dpsMax * 1e10 + mineTick) * mm) * sp;
+  const money = ((dpsLv1 ? dpsLv1 * lv1Mult(dpsLv1) * (1 + 0.01 * st('1_1')) : 0) + (dpsLv2 ? dpsLv2 * lv2Mult(dpsLv2) * 1e5 * (1 + 0.01 * st('1_1')) : 0) + (dpsMax * 1e10 + mineTick) * mm) * sp * (1 + 0.1 * ob('glut'));   // 폭식의 보주: 돈 +0.1배/개
   // 허수아비 무조 적립 순간 (24프레임당, T.013): 극한·초월·무한은 들어온 순간이 박자(앞 단계 syncCover — 48강 최대 80%·49강 0.85·50강 매 프레임), 나머지는 기마다 따로
   let miss = 1;
   for (const k in scareCnt){ const s = UD[k][0], c = P1.syncCover(s, scareCnt[k]); miss *= c !== null ? 1 - c : Math.pow(1 - Math.min(1, pd(s, 1, 1) / 24), scareCnt[k]); }
   if (uqScare) miss *= 1 - Math.min(1, uHr / 24);
   const scareM24 = 24 * (1 - miss);
   let scareN = uqScare ? 1 : 0; for (const k in scareCnt) scareN += scareCnt[k];   // T.018: 한 번 쌓일 때 양 × 둘레 유닛 수 (허수광산 자리·낮은 강 제외, 고유유닛 포함)
-  const vend = S.vendHi ? climbHi(money, u1, u2) : climb(money, u1, u2);   // vendHi: 49강 묶음·51~54강도 삼
+  const vend = climbHi(money, u1, u2, S.v49, S.v51, S.n49, S.n12);   // 49강 묶음·51~54강도 삼
   // 1~39강
   const N = new Float64Array(51), feedHi = {};
   for (const k in vend.streams){ const lv = +k; if (lv <= 40) N[lv] += vend.streams[k] * 3600; else feedHi[lv] = vend.streams[k] * 3600; }
@@ -1797,13 +1825,16 @@ function prodCalc(S){
   N[49] += feedHi[49] || 0;   // 자판기 49강 묶음
   N[50] = N[49] * eff[49];
   // 통합: 44강 도착 · 44~49강 성공(파방 재시도 포함) · 자판기 45·46강 직접 투입 → 판 안에서 단계별로 팔지/강화할지 굴림
-  return {fms, sp, money, mm, M, N, n50: N[50], fail, pab, vend, dps5, lowHits, raws, eff, in44:N[44], feed:{45:feedHi[45] || 0, 46:feedHi[46] || 0, 49:feedHi[49] || 0}, feed5, scareM24, scareN, maxDpsRaw};
+  // 50강 환산 생산(n50eq): 자판기가 51~54강을 바로 사는 몫(feed5)을 50강 몇 기에 해당하는지로 더함 — 돈이 넘쳐 54강 묶음만 사면 n50이 0이 되므로, 스탯·보석·보주 효율은 이 값으로 잼 (2026-10-12)
+  let n50eq = N[50];
+  if ((S.exLv || 0) >= 1){ const q = exProbs(S.exLv, S.ex || {}, gm('patience'), C, S.multi !== false).map(v => Math.max(1e-9, v / 100)); let m = 1; for (let s = 51; s <= 54; s++){ m *= q[s - 51]; if (feed5[s] > 0) n50eq += feed5[s] / m; } }
+  return {fms, sp, money, mm, M, N, n50: N[50], n50eq, fail, pab, vend, dps5, lowHits, raws, eff, in44:N[44], feed:{45:feedHi[45] || 0, 46:feedHi[46] || 0, 49:feedHi[49] || 0}, feed5, scareM24, scareN, maxDpsRaw};
 }
 // ---- 50→56강 확률 (계산기 exCalc) ----
-function exProbs(exLv, ex, patience, C){
-  const s = k => ex[k] || 0, hi = C.hi || 0, m = 0.5;   // 멀티 보너스 +0.5%p (51~58강)
+function exProbs(exLv, ex, patience, C, multi){
+  const s = k => ex[k] || 0, hi = C.hi || 0, m = multi === false ? 0 : 0.5;   // 멀티 보너스 +0.5%p (51~58강) — 2명 이상 판에서만 (multi false = 혼자)
   return [Math.min(100, 0.01 * exLv + 0.1 * s('5_1') + 0.001 * patience + C.p50),
-    Math.min(100, 5 + 0.1 * s('5_2') + m), Math.min(100, 3 + 0.1 * s('5_3') + m), Math.min(100, 1 + 0.1 * s('5_4') + m),
+    Math.min(100, 5 + 0.1 * s('5_2') + m + (C.gilun || 0)), Math.min(100, 3 + 0.1 * s('5_3') + m + (C.gilun || 0)), Math.min(100, 1 + 0.1 * s('5_4') + m + (C.gilun || 0)),
     Math.min(100, 0.3 + 0.01 * s('5_5') + 0.05 * s('7_1') + hi + m),
     Math.min(100, 0.05 + 0.01 * s('5_6') + 0.02 * s('7_2') + hi + m)];   // [50→51, 51→52, 52→53, 53→54, 54→55, 55→56]
 }
@@ -1832,7 +1863,7 @@ function g50Expect(M, C){
 // ---- 일반 스탯 배분 — 레벨×150 포인트로 ln(시간당 50강)이 가장 큰 배분 (4-1은 허수아비 무조라 이 시뮬에선 효과 0) ----
 const STAT_KEYS = Object.keys(STAT_DEF);
 function statCost(st){ let c = 0; for (const k of STAT_KEYS) c += (st[k] || 0) * STAT_DEF[k][1]; return c; }
-function lnN50(S){ const n = prodCalc(S).n50; return n > 0 ? Math.log(n) : -1e9; }
+function lnN50(S){ const n = prodCalc(S).n50eq; return n > 0 ? Math.log(n) : -1e9; }   // 50강 환산 생산 (51~54강 직접 구매 포함)
 function orderStats(budget){   // 예전 규칙: 1~3쪽·4-1을 순서대로 마스터 → 남는 것 3P-6
   const st = {}; let left = budget;
   for (const k of STAT_KEYS){ if (k === '3_6') continue; const [mx, cost] = STAT_DEF[k]; st[k] = Math.max(0, Math.min(mx, Math.floor(left / cost))); left -= st[k] * cost; }
@@ -1882,8 +1913,8 @@ function gExpect(s, M, C){
   G.rw.forEach(([k, n, p]) => { const e = n * p / 100; if (k === 'sh') sh += e; else if (k === 'aw') aw += e; else cr += e; });
   return {shards: sh * M * (1 + (SUP.shAdd + C.shPct) / 100) * SUP.shFin, awaken: aw * M * (1 + (SUP.awAdd + C.awPct) / 100) * SUP.awFin, credit: cr * M * (1 - C.disc / 100), cost: LOW_SELL_CR * (1 - C.disc / 100)};   // T.014 #17: 크레딧 당첨 × (100 − 할인)%
 }
-function cryLvOf(c, tot){ const need = c.max === 10 ? NEED10 : NEED20; let L = -1; for (let i = 0; i <= c.max; i++) if (tot >= need[i]) L = i; return L; }
-function cryNeed(c, L){ return (c.max === 10 ? NEED10 : NEED20)[L]; }
+function cryLvOf(c, tot){ const need = c.need || (c.max === 10 ? NEED10 : NEED20); let L = -1; for (let i = 0; i <= c.max; i++) if (tot >= need[i]) L = i; return L; }
+function cryNeed(c, L){ return (c.need || (c.max === 10 ? NEED10 : NEED20))[L]; }
 
 // =====================================================================================
 // 한 사람의 진행 (리방 포함)
@@ -1895,7 +1926,7 @@ function run(P0, seed, wantLog, init, ext){
   const poisson = l => { if (!(l > 0)) return 0; if (l < 30){ const L = Math.exp(-l); let k = 0, p = 1; do { k++; p *= rnd(); } while (p > L); return k - 1; } const v = Math.round(l + Math.sqrt(l) * gauss()); return v < 0 ? 0 : v; };
   const binom = (n, p) => { if (n <= 0 || p <= 0) return 0; if (p >= 1) return n; if (n <= 60){ let k = 0; for (let i = 0; i < n; i++) if (rnd() < p) k++; return k; }
     const m = n * p; if (m < 20) return Math.min(n, poisson(m)); const q = n * (1 - p); if (q < 20) return Math.max(0, n - poisson(q)); const v = Math.round(m + Math.sqrt(m * (1 - p)) * gauss()); return v < 0 ? 0 : v > n ? n : v; };
-  const log = ext && ext.log ? ext.log : []; let t = init ? init.t : 0;
+  const log = ext && ext.log ? ext.log : []; let t = init ? init.t : Math.max(0, P.t0H || 0) * 3600;   // 지정 스펙: 게임 시작 뒤 t0H시간에서 시작 (엑보 하루 해금·융합 시작 시각이 이 시계를 씀)
   const L = msg => { if (wantLog && log.length < 12000) log.push([t, msg]); };
   const fmtN = n => { const U = [['해',1e20],['경',1e16],['조',1e12],['억',1e8],['만',1e4]]; for (const [l, v] of U) if (n >= v) return (Math.round(n / v * 10) / 10) + l; return String(Math.round(n)); };
 
@@ -1905,31 +1936,40 @@ function run(P0, seed, wantLog, init, ext){
       exLv:init.exLv, exCum:init.exLv > 0 ? F(init.exLv - 1) : 0, ex:{}, expts:init.exLv * 30, cry:{}, credits:init.credits, sh:init.shards, crs:0, ep:init.expoint, minePts:0,
       cp:{hot:init.cp.hot, special:init.cp.special, exp:init.cp.exp, sell2x:init.cp.sell2x, mine2x:0, spec:init.cp.spec},
       race:Object.assign({}, init.race), bossHigh:init.bossHigh, mission:init.mission}
-    : {level:P.level, gexp:0, st:{}, gpts:0, gems:Object.assign({}, P.gemObj), awaken:P.awaken, awg:0,
-      exLv:P.exLv0, exCum:P.exLv0 > 0 ? F(P.exLv0 - 1) : 0, ex:{}, expts:P.exLv0 * 30, cry:{}, credits:P.credits0, sh:0, crs:P.crs0, ep:P.ep0, minePts:0,
-      cp:{hot:0, special:0, exp:0, sell2x:0, mine2x:0, spec:0}, race:Object.assign({}, RACE), bossHigh:5, mission:999};
-  if (!init){ A.st = startStats(P, A.gems); A.gpts = Math.max(0, A.level * 150 - statCost(A.st)); }
+    : {level:P.level, gexp:0, st:{}, gpts:0, gems:Object.assign({}, P.gemObj), awaken:P.awaken, awg:P.awg0 || 0,
+      exLv:P.exLv0, exCum:P.exLv0 > 0 ? F(P.exLv0 - 1) : 0, ex:{}, expts:P.exLv0 * 30, cry:{}, credits:P.credits0, sh:P.sh0 || 0, crs:P.crs0, ep:P.ep0, minePts:P.minePts0 || 0,
+      cp:Object.assign({hot:0, special:0, exp:0, sell2x:0, mine2x:0, spec:0}, P.cp0Obj || {}), race:Object.assign({}, P.race0Obj || RACE), bossHigh:5, mission:P.mission0 > 0 ? Math.floor(P.mission0) - 1 : 999};
+  if (!init){
+    if (P.st0Arr.length){ P.st0Arr.forEach(([k, v]) => { A.st[k] = v; }); A.gpts = Math.max(0, A.level * 150 - statCost(A.st)); }   // 적은 일반 스탯 그대로, 남는 포인트는 효율대로 더 찍음
+    else { A.st = startStats(P, A.gems); A.gpts = Math.max(0, A.level * 150 - statCost(A.st)); }
+    if (P.ex0Arr.length){ let c = 0; P.ex0Arr.forEach(([k, v]) => { A.ex[k] = v; c += v * EX_DEF[k][1]; }); A.expts = Math.max(0, A.expts - c); }   // 적은 초월 스탯 그대로, 남는 포인트는 효율대로
+  }
   CRY.forEach(c => { A.cry[c.k] = 0; });            // 보유 개수 (제작·상자 합, 강화에 쓴 것 포함)
   A.cs = 0; A.orb = {}; for (const k in ORBC) A.orb[k] = 0;   // 응축된 무색 조각 · 보주 (응무조 단계)
+  A.adv = init ? 0 : (P.adv0 || 0); A.qbox = 0; A.gal = 0;
+  if (!init){ for (const k in P.orb0Obj) A.orb[k] = P.orb0Obj[k]; A.cs = P.cs0 || 0; }   // 지정 스펙: 보주 · 응축된 무색 조각   // 엑보 줄에서 받는 상급 크리스탈 조각 · 퀘이사 상자 · 은하의 조각 (이 시뮬은 모아 두기만 — 퀘이사 크리스탈·우주 +21↑ 효과 없음)
   P.cry0Arr.forEach(([k, L]) => { if (L > 0) A.cry[k] = cryNeed(CRY_BY[k], L); });   // 시작 크리스탈 강수
+  parseList(P.cryX0 || '', CRY_BY).forEach(([k, n]) => { if (n > 0) A.cry[k] += Math.round(n); });   // cryX0: 지금 강에서 다음 강까지 모은 개수 (예: c20:13300)
   if (init && init.cryN) for (const k in init.cryN) if (init.cryN[k] > 0) A.cry[k] = (A.cry[k] || 0) + init.cryN[k];   // 앞 단계에서 상자로 얻은 노말 크리스탈
   const cryLv = k => cryLvOf(CRY_BY[k], A.cry[k]);
   const raceTotal = () => A.race.Q + A.race.W + A.race.E + A.race.A + A.race.S + A.race.D + A.race.X;
   // ---------- 기록 ----------
   const rec = {seed, done:false, t:null, firstT:{}, exT:{}, dpsT:[], reboots:0, runs:0, sold50:0, soldEx:{52:0,53:0,54:0,55:0,56:0}, att50:0,
     cr:{mine:0, first:0, fi:0, gacha:0, ep:0, boss:0, mission:0}, crSpent:{s50:0, ex:0, sLow:0}, epGain:0, epSpent:{hot:0, special:0, exp:0, sell2x:0, mine:0, mine2x:0, credit:0, box:0, spec:0},
-    shGain:{gacha:0, first:0, scare:0, mission:0}, shSpent:0, crsGain:{sale:0, dps:0, disasm:0}, crsSpent:0, boxes:{N:0, R:0, U:0, G:0}, exGain:{sale:0, fail:0}, gemBuys:{}, Tsec:{52:0,53:0,54:0,55:0}, hotH:0, spH:0, x2H:0, jfH:0, jfHt:0, pushN:0, saleRuns:0, fi25Sum:0, fi25N:0,
+    shGain:{gacha:0, first:0, scare:0, mission:0}, shSpent:0, crsGain:{sale:0, dps:0, disasm:0}, crsSpent:0, boxes:{N:0, R:0, U:0, G:0, Q:0}, exGain:{sale:0, fail:0}, gemBuys:{}, Tsec:{52:0,53:0,54:0,55:0}, hotH:0, spH:0, x2H:0, jfH:0, jfHt:0, pushN:0, saleRuns:0, fi25Sum:0, fi25N:0,
     // 통합
     t0:t, soldBy:{45:0,46:0,47:0,48:0,49:0,50:0}, goalRunsT:[], u20T:{}, awDT:{}, cryH:{}, cryMax:{}, cryBySlot:{}, slotH:{}, slotT:{}, slotOwn:{}, fiNextRank:init ? Math.max(0, FI_TIERS.indexOf(init.fiTarget)) : 0, fiTierH:{}, upgrades:0, bossHighT:{}, missionT:{},
     first50T:init && init.first50T != null ? init.first50T : undefined, exLv1T:undefined, salePlanLast:null, statResets:0,
     noCr:{45:0,46:0,47:0,48:0,49:0,50:0,ex:0}, lowSellLastT:undefined, hiSellFirstT:undefined,
-    cond:{cs:0, csH:[], sold:{}, tried:{}, made:{}, firstT:{}, orbSpent:0, noCr:0}};   // cond: 응무조 단계 (csH = 시간마다 그때까지 모은 응무조)   // noCr: 팔려고 했는데 크레딧이 모자라 못 판 유닛 수 (ex = 52강↑ 판매 강)
+    cond:{cs:0, csH:[], sold:{}, tried:{}, made:{}, firstT:{}, orbSpent:0, noCr:0},
+    e60:0, e60T:{}, fiEp:0, fiLineMax:0, mineStepH:{}, mineEp:0, unit60:{in:{}, mine:{}, sold:{}, push:{}}};   // e60: 59강 도전마다 60강 확률을 더한 기대 60강 수 (e60T[0.5·1] = 그 값에 닿은 시각 — 운을 뺀 비교용) · unit60: 57~59강이 어디로 갔는지   // cond: 응무조 단계 (csH = 시간마다 그때까지 모은 응무조)   // noCr: 팔려고 했는데 크레딧이 모자라 못 판 유닛 수 (ex = 52강↑ 판매 강)
 
   // ---------- 판(리방하면 초기화) ----------
   let lastEqLog = "", R = null, prod = null, prodDirty = true, lastProdT = -1e18, cryDirty = true, C = NO_CRY, eqLv = {};
+  let sleepSaleNext = false, asleepNow = false;
   let T = 52, pushT = false, nextTDecide = 0, crEMA = 0, attEMA = 0, exNeedH = 0, nextGem = 0, exDirty = true, lastExAlloc = -1e18, done = false;
   const cnt = new Float64Array(61);
-  function mineCount(){ let m = 0; for (let s = 51; s <= 57; s++) m += R.hg[s]; return m; }
+  function mineCount(){ let m = 0; for (let s = 51; s <= 59; s++) m += R.hg[s]; return m; }
   // 스탯 초기화(Ctrl+O — 판 시작 10분 안, 유닛을 뽑기 전에만): statReset = handoff(넘길 때 한 번) · reboot(리방마다).
   // 그때 레벨 포인트 전부를 ln(시간당 50강) 최적으로 다시 찍는다 (사냥터는 직전 판 구성 기준). 비용은 0으로 가정.
   function resetStats(hg, why){
@@ -1941,14 +1981,17 @@ function run(P0, seed, wantLog, init, ext){
   function newRun(){
     const prevHg = R ? R.hg : null;
     // 크리스탈 투트랙: saleEvery번째 판마다 「판매 판」(50강 판매용 크리스탈), 나머지는 「도전 판」(51강 이상용)
-    const sale = P.saleEvery > 0 && (rec.runs + 1) % P.saleEvery === 0;
+    const sale = sleepSaleNext;   // sleepSaleNext: 잘 때 여는 판매 판(sleepRoom sale)
     if (P.statReset === 'reboot' && prevHg) resetStats(prevHg, '리방');
     let didReset = false;
     if ((P.exResetRoom === 'on' || A.fuseResetPending) && prevHg){ A.fuseResetPending = false; didReset = true; let back = 0; for (const k in EX_DEF){ back += (A.ex[k] || 0) * EX_DEF[k][1]; A.ex[k] = 0; } A.expts += back; exDirty = true; }   // 판 시작(유닛 뽑기 전 10분 안) 초월 스탯 초기화 → 지금 목표로 다시 찍음 (6쪽 공업까지 전부 돌려받음 — 예전엔 확률 스탯만 돌려받아 판마다 공업에 포인트가 새 나갔음)
     if (didReset && P.resetSec > 0){ for (const k in A.cp) A.cp[k] = Math.max(0, A.cp[k] - P.resetSec); t += P.resetSec; rec.resetN = (rec.resetN || 0) + 1; }   // 다시 찍는 손 시간 (기본 2분)
     R = {t0:t, hg:new Float64Array(61), ready:false, readyT:t + P.hgFillSec, reached:new Uint8Array(61), dpsIdx:0, fiHits:0, fiStage:0, eq:[], stock:new Float64Array(61), mode: sale ? 'sale' : 'ch',
-      fiLv:0, fiRate:0, fiTargetRank:rec.fiNextRank, tierT:{}, goalHit:false, fuseProg:0, n57:0, fuseAtt0:rec.fuseAtt || 0};
+      fiLv:0, fiRate:0, fiTargetRank:rec.fiNextRank, tierT:{}, goalHit:false, fuseProg:0, n57:0, fuseAtt0:rec.fuseAtt || 0, fiLine:0, fiMaxIdx:fiMaxIdxNow()};
     if (sale) rec.saleRuns++;
+    R.qSum0 = qSumNow();
+    // 판 즉시 복구(fastStartT, 사용자 영상 2026-10-12): 첫 fastStartT강 뒤의 판은 리셋 직후 자판기가 51~54강을 바로 다시 사서 지난 판 사냥터·광산이 돌아옴
+    R.prevHg = prevHg ? Float64Array.from(prevHg) : null; R.fast = P.fastStartT > 0 && rec.firstT[P.fastStartT] !== undefined;
     R.snap = snapRec();
     rec.runs++; prodDirty = true; equipFill(); cryDirty = true;
     if (didReset){ refreshC(); lastExAlloc = -1e18; allocEx(); }   // 초기화한 판: 유닛을 뽑기 전에 바로 다시 찍음 (안 그러면 판 시작 직후 스탯 0으로 판매 강을 정해 버림)
@@ -1956,7 +1999,7 @@ function run(P0, seed, wantLog, init, ext){
   // 앞 단계에서 넘겨받은 판 (사냥터 41강 이상 · 첫 달성 · 엑보 진행)
   function runFromInit(){
     R = {t0:init.roomT0, fromInit:true, handT:t, hg:new Float64Array(61), ready:true, readyT:t, reached:new Uint8Array(61), dpsIdx:0, fiHits:init.fiHits, fiStage:init.fiStage, eq:[], stock:new Float64Array(61), mode:'ch',
-      fiLv:init.fiLv, fiRate:fiRateOf(init.fiLv), fiTargetRank:rec.fiNextRank, tierT:{}, goalHit:false, fuseProg:0, n57:0, fuseAtt0:0};
+      fiLv:init.fiLv, fiRate:fiRateOf(init.fiLv), fiTargetRank:rec.fiNextRank, tierT:{}, goalHit:false, fuseProg:0, n57:0, fuseAtt0:0, fiLine:Math.min(2, init.fiStage || 0), fiMaxIdx:fiMaxIdxNow(init.roomT0)};   // 앞 단계가 5,000·25,000타까지 줬음
     for (const lv of init.hunt) if (lv >= 41 && lv <= 56) R.hg[lv]++;
     for (let lv = 0; lv < 57 && lv < init.reachedArr.length; lv++) R.reached[lv] = init.reachedArr[lv];
     if (init.pending51) cnt[51] += init.pending51;   // 앞 단계에서 51강이 나와 넘긴 경우
@@ -1967,16 +2010,19 @@ function run(P0, seed, wantLog, init, ext){
   function equipFill(){
     const slots = slotsOf(A.exLv);
     let added = false;
-    for (const k of (R.mode === 'sale' ? P.eqSaleArr : (P.eqSlotMap[slots] || []).concat(P.eqArr))){ if (R.eq.length >= slots) break; if (R.eq.includes(k) || cryLv(k) < 1) continue; R.eq.push(k); added = true; cryDirty = true; }
+    for (const k of (R.mode === 'sale' ? P.eqSleepArr : (P.eqSlotMap[slots] || []).concat(P.eqArr))){ if (R.eq.length >= slots) break; if (R.eq.includes(k) || cryLv(k) < 1) continue; R.eq.push(k); added = true; cryDirty = true; }
     if (added){ const s = R.eq.map(k => CRY_BY[k].name + " +" + cryLv(k)).join(" · "); if (s !== lastEqLog){ L(`크리스탈 장착${R.mode === 'sale' ? ' [판매 판]' : ''} (슬롯 ${R.eq.length}/${slots}): ${s}`); lastEqLog = s; } }
   }
   function refreshC(){ eqLv = {}; R.eq.forEach(k => { eqLv[k] = Math.max(0, cryLv(k)); }); C = cryAgg(eqLv); if (P.discAdd > 0) C = Object.assign({}, C, {disc:Math.min(100, (C.disc || 0) + P.discAdd)}); cryDirty = false; prodDirty = true; }   // discAdd: 판매 할인 %p를 공짜로 더해 봄 (비교용)
-  function spec(){ return {level:A.level, exLv:A.exLv, st:A.st, gems:A.gems, awaken:A.awaken, ex:A.ex, C, hg:R.hg, mine:A.bossHigh >= 5 && P.p1Mine !== 'off', race:A.race, spec:A.cp.spec > 0, vendHi:P.vendHi !== 'off', power:A.orb.power}; }   // 허수광산은 개인보스 10단계 뒤
+  function spec(){ return {level:A.level, exLv:A.exLv, st:A.st, gems:A.gems, awaken:A.awaken, ex:A.ex, C, hg:R.hg, mine:A.bossHigh >= 5, race:A.race, spec:A.cp.spec > 0, v49:P.v49Mode === 'on' && !!(A.fuseOn || A.condOn), n12:P.aw12 > 0 && !!A.v52seen && !A.aw12Done && !!(A.fuseOn || A.condOn), n49:P.aw12 > 0 && !!A.aw12Done && !!(A.fuseOn || A.condOn), v51:sleepAwMode() < 2, power:A.orb.power, orb:A.orb, multi:multiOn()}; }   // 허수광산은 개인보스 10단계 뒤
   const hotOn = () => A.cp.hot > 0, spOn = () => A.cp.special > 0;
+  // 그 판 인원 (멀티): 처음 fiMultiRooms판은 fiMultiN명, 그 뒤 fiMultiN2명 — 엑보 타수 N배 · 2명 이상이면 멀티 보너스 (뽑기 +1 · 51~58강 +0.5%p · 융합 +0.5%p · 57~59강 공업 +3)
+  const playersNow = () => { const ri = (init ? (init.rerolls || 0) : 0) + rec.runs - 1; return Math.max(1, (P.fiMultiN > 1 && ri < (P.fiMultiRooms || 0)) ? P.fiMultiN : (P.fiMultiN2 || 1)); };
+  const multiOn = () => P.multiBonus === 'on' || (P.multiBonus !== 'off' && playersNow() >= 2);
   const xMul = () => (1 + (SUP.exAdd + C.exPct + 100 * A.orb.exp) / 100) * SUP.exFin * (hotOn() ? (spOn() ? 3 : 2) : 1);
-  const g50M = () => 1 + 1 + (hotOn() ? 1 : 0) + (spOn() ? 3 : 0) + (A.cp.sell2x > 0 ? 1 : 0);
+  const g50M = () => 1 + (multiOn() ? 1 : 0) + (hotOn() ? 1 : 0) + (spOn() ? 3 : 0) + (A.cp.sell2x > 0 ? 1 : 0);
   const expMult = () => (1 + BOSS15.exp / 100 + A.race.E * 0.2 + 0.1 * (A.gems.exp || 0) + (A.level < 1000 ? 1 : 0)) * (1 + (hotOn() ? 5 : 0) + (A.cp.exp > 0 ? 5 : 0) + (spOn() ? 50 : 0)) * SUP.expFin * Math.pow(1.1, (A.gems.mastery || 0) + awDigits(A.awaken));   // T.013: 각성 자릿수마다 ×1.1
-  const probs = () => { const p = exProbs(A.exLv, A.ex, A.gems.patience || 0, C); if (A.orb.low || A.orb.mid || A.orb.eon){ p[4] = Math.min(100, p[4] + 0.1 * A.orb.low + 0.03 * A.orb.eon); p[5] = Math.min(100, p[5] + 0.1 * A.orb.mid + 0.03 * A.orb.eon); } return p; };   // 하급·중급·영겁의 보주 = 54·55강 확률
+  const probs = () => { const p = exProbs(A.exLv, A.ex, A.gems.patience || 0, C, multiOn()); if (A.orb.low || A.orb.mid || A.orb.eon){ p[4] = Math.min(100, p[4] + 0.1 * A.orb.low + 0.03 * A.orb.eon); p[5] = Math.min(100, p[5] + 0.1 * A.orb.mid + 0.03 * A.orb.eon); } return p; };   // 하급·중급·영겁의 보주 = 54·55강 확률
   function addCredits(x, src){ A.credits += x; rec.cr[src] += x; crInc += x; }
   let crInc = 0, exEMA = 0;
 
@@ -1990,7 +2036,7 @@ function run(P0, seed, wantLog, init, ext){
     const after = cryLv(k);
     // 목표 우주 +N (goalCry > 0): 우주 단계별 처음 도달 시각 기록, 목표 단계면 끝
     if (k === 'c20' && after > before){ for (let lv = Math.max(0, before + 1); lv <= after; lv++) if (rec.u20T[lv] === undefined){ rec.u20T[lv] = t; if (lv >= 1) L(`우주 +${lv} (초월 ${A.exLv})`); }
-      if (P.goalCry > 0 && !(P.fuseGoal > 0) && after >= P.goalCry && !done){ done = true; rec.done = true; rec.t = t; L(`목표: 우주 +${P.goalCry} 달성!`); } }
+      if (P.goalCry > 0 && P.goal60 !== 'on' && after >= P.goalCry && !done){ done = true; rec.done = true; rec.t = t; L(`목표: 우주 +${P.goalCry} 달성!`); } }
     if (after !== before){ cryDirty = true; if (after >= 1 && before < 1) L(`크리스탈 ${c.name} +${after} (${why})`); if (R) equipFill(); }
   }
   function openBoxes(g, n, why){
@@ -2076,15 +2122,37 @@ function run(P0, seed, wantLog, init, ext){
     // 목표: 서로 다른 판 N개에서 목표 강 첫 달성 (판마다 다시 받는 첫 달성 = 그 판에서 처음 뽑음)
     // 목표: 우주 +goalCry (gainCry에서 끝냄). goalCry 0이면 목표 강을 처음 뽑을 때 끝 (판 수 조건은 없앰 — 사용자 2026-10-08)
     if (s >= P.goal && !R.goalHit){ R.goalHit = true; rec.goalRunsT.push(t);
-      if (!(P.goalCry > 0) && !(P.fuseGoal > 0) && !done){ done = true; rec.done = true; rec.t = t; L(`목표: ${P.goal}강 첫 달성!`); } }
+      if (!(P.goalCry > 0) && P.goal60 !== 'on' && !done){ done = true; rec.done = true; rec.t = t; L(`목표: ${P.goal}강 첫 달성!`); } }
   }
   // ---------- 엑보 (보스존 1기, 그 판 동안 못 뺌): 26 → 36 → 40 → 48 → 49 → 50 → 엑보 타수 48 이상 51강↑ ----------
   function fiRateOf(lv){   // 24프레임당 엑보 타수
     if (!lv) return 0;
     if (lv <= 50) return P1.HITS24[lv];
-    return (U5[lv].atk * (10 + (A.ex['6_' + (lv - 50)] || 0) + C.upg) / 10 * P.fiMult + 1) * U5[lv].hit;   // 51강↑: 공격 1번에 공격력(공업 포함) × 피해 배수(기본 4) + 1 — 영상 확인 2026-10-06 (51강 30 → 121, 52강 200 → 801)
+    if (!U5[lv]) return 0;   // 60강은 공격하지 않음
+    const div = 1 + (A.orb.divine || 0);   // 신위의 보주: 51~59강 기본 공격력 +100%/개
+    if (lv >= 57) return (U5[lv].atk * div * (10 + (multiOn() ? 3 : 0) + (A.orb[ORB_ATK[lv]] || 0) + (C.mugu || 0)) / 10 * P.fiMult + 1) * U5[lv].hit;   // 57~59강 표기 공격력 (멀티 +3 · 힘/지위/권력)
+    return (U5[lv].atk * div * (10 + (A.ex['6_' + (lv - 50)] || 0) + C.upg) / 10 * P.fiMult + 1) * U5[lv].hit;   // 51강↑: 공격 1번에 공격력(공업 포함) × 피해 배수(기본 4) + 1 — 영상 확인 2026-10-06 (51강 30 → 121, 52강 200 → 801)
   }
-  const fiRank = lv => lv >= 51 ? (fiRateOf(lv) >= 48 ? 6 : -1) : FI_TIERS.indexOf(lv);
+  const fiRank = lv => lv >= 51 ? (fiRateOf(lv) >= 48 ? 6 + (lv - 51) : -1) : FI_TIERS.indexOf(lv);   // 51강↑은 높은 강일수록 위 (25,000타 뒤에도 바뀜 — fiSwapAll)
+  // 엑보 줄 하루 해금: 판을 시작한 날(출시 뒤 1일째 = 만 묶음까지)에 열린 묶음까지만. fiDaily off = 공개 테스트처럼 25,000타에서 멈춤
+  function fiMaxIdxNow(t0){
+    if (P.fiDaily === 'off') return 2;
+    const day = Math.floor(((t0 === undefined ? t : t0) + P.fiDay0H * 3600) / 86400) + 1, g = day >= 7 ? 99 : day - 2;   // 첫날은 25,000타까지 (사용자 확인 2026-10-12), 둘째 날 만 묶음부터
+    let n = 0; while (n < FI_LINES.length && (n < 2 || FI_LINES[n].grp <= g)) n++; return n;
+  }
+  function fiReward(i){
+    const F = FI_LINES[i], h = hotOn() ? 2 : 1;
+    if (F.cr) addCredits(F.cr * h * (P.fiCrX || 1), 'fi');
+    const ep = (F.ex * (P.fiBaseFin === 'off' ? 1 : SUP.epFin) + (F.sup ? SUP.fi[i] : 0)) * h * (P.fiEpX || 1);   // 후원 LV.20: 기본 × 최종 5배 (+ 5,000·25,000줄 후원 몫)
+    A.ep += ep; rec.epGain += ep; rec.fiEp += ep;
+    if (F.shard){ const s = F.shard * SUP.crys * h; A.crs += s; rec.crsGain.fi = (rec.crsGain.fi || 0) + s; }
+    if (F.N) openBoxes('N', F.N * h, '엑보'); if (F.R) openBoxes('R', F.R * h, '엑보'); if (F.U) openBoxes('U', F.U * h, '엑보');
+    if (F.adv) A.adv += F.adv * h; if (F.q){ A.qbox += F.q * h; openBoxes('Q', F.q * h, '엑보'); } if (F.gal) A.gal += F.gal * h;
+    if (i === 0){ R.fiStage = 1; R.k5T = t; if (!rec.fi5kT) rec.fi5kT = t; L(`엑보 5,000타: ExPoint +${fmtN(ep)}`); }
+    else if (i === 1){ R.fiStage = 2; R.k25T = t; if (!rec.fi25kT) rec.fi25kT = t; rec.fi25Sum += t - R.t0; rec.fi25N++; L(`엑보 25,000타: ExPoint +${fmtN(ep)}`); }
+    else if (i > rec.fiLineMax) L(`엑보 ${fmtN(F.n)}타 줄 처음 (판 ${fmtSec(t - R.t0)}): ExPoint +${fmtN(ep)}${F.adv ? ' · 상급 조각 ' + F.adv * h : ''}${F.q ? ' · 퀘이사 상자 ' + F.q * h : ''}${F.gal ? ' · 은하의 조각 ' + F.gal * h : ''}`);
+    if (i > rec.fiLineMax) rec.fiLineMax = i;
+  }
   function fiLock(lv, why){ R.fiLv = lv; R.fiRate = fiRateOf(lv); rec.fiTierH[lv >= 51 ? 51 : lv] = (rec.fiTierH[lv >= 51 ? 51 : lv] || 0) + 1;
     if (rec.runs <= 3 || (rec.fiTierH[lv >= 51 ? 51 : lv] || 0) <= 1){ const last = log.length ? log[log.length - 1] : null;   // 같은 시각에 여러 번 바뀌면 한 줄로 (40 → 48 → 49 → 50강)
       if (wantLog && last && last[0] === t && last[1].startsWith('엑보 유닛: ')) last[1] = last[1].replace(/ — 24프레임당 .*$/, '') + ` → ${lv}강 — 24프레임당 ${R.fiRate.toFixed(1)}타`;
@@ -2095,7 +2163,7 @@ function run(P0, seed, wantLog, init, ext){
     if (P.fiUp === 'on' && fiRank(s) < 0){ for (let k = s; k >= 26; k--) if (R.reached[k] && fiRank(k) >= 0){ s = k; break; } }   // 흐름 모델은 강을 한꺼번에 지나므로 지나온 가장 좋은 단계
     const r = fiRank(s); if (r < 0) return;
     if (!R.fiLv){ if (r >= (P.fiUp === 'on' || P.fiUp === 'f26' ? 0 : R.fiTargetRank)) fiLock(s); }
-    else if (P.fiUp === 'on' && R.fiStage < 2 && r > fiRank(R.fiLv)){ const k0 = R.fiLv >= 51 ? 51 : R.fiLv; if (rec.fiTierH[k0] > 0) rec.fiTierH[k0]--; rec.fiUps = (rec.fiUps || 0) + 1; fiLock(s, '더 높은 단계로 바뀜'); }
+    else if (P.fiUp === 'on' && (R.fiStage < 2 || P.fiSwapAll === 'on') && r > fiRank(R.fiLv)){ const k0 = R.fiLv >= 51 ? 51 : R.fiLv; if (rec.fiTierH[k0] > 0) rec.fiTierH[k0]--; rec.fiUps = (rec.fiUps || 0) + 1; fiLock(s, '더 높은 단계로 바뀜'); }
   }
   function fiCheck(){   // 기다리는 시간이 지나도 목표 단계가 안 나오면 지금까지 나온 가장 좋은 단계로
     if (P.fiUnit !== 'auto' || R.fiLv || !R.ready || t - R.t0 < (P.fiUp === 'on' || P.fiUp === 'f26' ? 0 : P.fiWait)) return;
@@ -2103,27 +2171,26 @@ function run(P0, seed, wantLog, init, ext){
     let best = 0, br = -1; for (let lv = 26; lv <= 56; lv++) if (R.reached[lv]){ const r = fiRank(lv); if (r > br){ br = r; best = lv; } }
     if (best) fiLock(best, '기다림 끝');
   }
-  // ---------- 56 → 57강 융합 (비교용, fuseGoal > 0일 때만 — 2026-10-10) ----------
+  // ---------- 56 → 57강 융합 (목표 60강일 때 — 2026-10-10 넣음, 2026-10-12 「한 판에 57강 N기」 목표 없앰) ----------
   // 규칙(계산기 fusionProb·fusionNeed, 사용자 확인): 56강 1기 = 진행도 +1, 진행도 20,000이 차면 1회 시도 — 확률 = 3% + 멀티 0.5%p + 7쪽-3 0.1%p/Lv
   // (+ 집중 크리스탈·상급/명운 보주·희생은 57강↑ 판매로만 생겨서 여기선 없음). 실패하면 진행도와 넣은 56강이 사라짐, 리방하면 진행도·57강도 사라짐.
   // fuseFrom: 'now' 뒤 단계 처음부터 · 'uN' 우주 +N 뒤 · 'hN' N시간 뒤 · 'xN' 초월 N 뒤 · 'rN' 56강 생산 능력이 시간당 N기 이상
-  // fuseRoom: 'attempt' 시도 1번 하고 진행도가 비면 리방 · 'never' 융합을 시작하면 리방 안 함 · 'normal' 원래 리방 규칙(진행도 버림)
   // fuseSell: 'push' 52~55강을 안 팔고 전부 56강으로 · 'keep' 원래 판매 규칙 그대로(남는 56강만 융합)
-  const fusePf = () => Math.min(100, 3 + 0.5 + 0.1 * (A.ex['7_3'] || 0) + 0.05 * A.orb.high + 0.02 * A.orb.fate);
-  const fuseNeed = () => Math.max(1, 20000 - 10 * A.orb.save);
+  const fusePf = () => Math.min(100, 3 + (multiOn() ? 0.5 : 0) + 0.1 * (A.ex['7_3'] || 0) + 0.05 * A.orb.high + 0.02 * A.orb.fate + (C.jip || 0));
+  const fuseNeed = () => { let n = Math.max(1, 20000 - 10 * A.orb.save); for (let i = 0; i < (C.jeol || 0); i++) n = Math.floor(n * 0.9); return Math.max(1, n); };   // 절제: Lv마다 ×0.9 내림
   const fuseActive = () => !!A.fuseOn;
   function fuseCheckStart(){
-    if (A.fuseOn || !(P.fuseGoal > 0)) return;
+    if (A.fuseOn || P.goal60 !== 'on') return;   // 융합은 목표 60강일 때만
     const f = String(P.fuseFrom || 'now'), n = +f.slice(1) || 0;
     let go = f === 'now';
     if (f[0] === 'u') go = cryLv('c20') >= n;
     else if (f[0] === 'h') go = t >= n * 3600;
     else if (f[0] === 'x') go = A.exLv >= n;
-    else if (f[0] === 'r' && prod) go = exChain(probs(), prod.n50).N[56] >= n;
+    else if (f[0] === 'r' && prod) go = exChain(probs(), prod.n50eq).N[56] >= n;
     if (!go) return;
     A.fuseOn = true; rec.fuseStartT = t; exDirty = true;
-    if (P.fuseExReset === 'on'){ A.fuseResetPending = true; R.forceReboot = true; }   // 초월 스탯 초기화는 판 시작(유닛 뽑기 전 10분 안)에만 → 바로 리방해서 새 판에서 융합 기준으로 다시 찍음
-    L(`융합 시작 (${f}): 초월 ${A.exLv} · 우주 +${Math.max(0, cryLv('c20'))} · 56강 생산 능력 시간당 ${prod ? fmtN(exChain(probs(), prod.n50).N[56]) : '-'}기`);
+    A.fuseResetPending = true; R.forceReboot = true;   // 초월 스탯 초기화는 판 시작(유닛 뽑기 전 10분 안)에만 → 바로 리방해서 새 판에서 융합 기준으로 다시 찍음
+    L(`융합 시작 (${f}): 초월 ${A.exLv} · 우주 +${Math.max(0, cryLv('c20'))} · 56강 생산 능력 시간당 ${prod ? fmtN(exChain(probs(), prod.n50eq).N[56]) : '-'}기`);
   }
   function fuseFeed(c){
     R.fuseProg += c; rec.fused56 = (rec.fused56 || 0) + c;
@@ -2132,14 +2199,9 @@ function run(P0, seed, wantLog, init, ext){
       R.fuseProg -= need; rec.fuseAtt = (rec.fuseAtt || 0) + 1;
       if (rnd() >= fusePf() / 100) continue;
       R.n57++; if (R.n57 > (rec.n57max || 0)) rec.n57max = R.n57;
-      // 57강은 사냥터(광산)에 넣음 — 48칸이 다 차면 가장 낮은 강과 바꿈 (광산 돈·크레딧 64배). 리방하면 사라짐
-      if (A.condOn && R.hg[57] >= 48){ condUnit(57, 1); continue; }   // 응무조 단계: 사냥터가 57강 48기면 남는 57강은 팔거나 위로
-      { let tot = 0; for (let lv = 41; lv <= 57; lv++) tot += R.hg[lv]; if (tot >= 48){ for (let lv = 41; lv <= 56; lv++) if (R.hg[lv] > 0){ R.hg[lv]--; break; } } R.hg[57]++; prodDirty = true; }
-      if (!R.got57){ R.got57 = true; const fm = Math.pow(1.5, awDigits(A.awaken)) * (1 + 0.1 * (A.gems.achieve || 0)); addCredits(1666666 * fm, 'first'); }   // 57강 첫 달성 크레딧(판마다)
-      if (rec.firstT[57] === undefined){ rec.firstT[57] = t; (rec.firstEx || (rec.firstEx = {}))[57] = A.exLv; L(`첫 57강 (융합 ${rec.fuseAtt}번째 시도, 확률 ${fusePf().toFixed(1)}%, 초월 ${A.exLv})`); }
-      else if (R.n57 % 8 === 0) L(`이 판 57강 ${R.n57}기`);
-      if (P.fuseGoal > 0 && R.n57 >= P.fuseGoal && !done && !A.condOn){ rec.done = true; rec.t = t; L(`목표: 한 판에 57강 ${P.fuseGoal}기! (초월 ${A.exLv.toLocaleString()} · 단수 ${fmtN(A.awaken)})`);
-        if (P.condHours > 0){ A.condOn = true; rec.condT0 = t; rec.condEx0 = A.exLv; rec.condAw0 = A.awaken; exDirty = true; lastExAlloc = -1e18; L(`응무조 단계 시작: 남는 57강을 팔아 응축된 무색 조각 → 보주 (${P.condHours}시간)`); } else done = true; }
+      // 57강부터는 unit60이 광산(사냥터 48칸) · 판매 · 위로(58 → 59 → 60강)를 정함 — 목표는 첫 60강 (한 판에 57강 N기 목표는 2026-10-12 사용자 요청으로 없앰)
+      if (!A.condOn){ A.condOn = true; rec.condT0 = t; rec.condEx0 = A.exLv; rec.condAw0 = A.awaken; exDirty = true; lastExAlloc = -1e18; L(`60강 단계 시작: 57강을 광산에 채우고 남는 것은 팔거나(응축된 무색 조각 → 보주) 58 → 59 → 60강으로`); }
+      firstMade(57); unit60(57, 1); if (done) return;
     }
   }
   function processChain(){
@@ -2152,7 +2214,9 @@ function run(P0, seed, wantLog, init, ext){
         c -= placeMine(s, c);
         if (s === 56){ if (c > 0 && fuseActive()){ fuseFeed(c); continue; } if (c > 0){ const k = Math.min(c, Math.floor(A.credits / EX_SELL_CR)); if (k > 0) sellEx(56, k); } continue; }
         if (c <= 0) continue;
-        if (!pushT && s >= T && s >= 52 && !(s === 55 && P.sell55 !== 'on') && !(s === 54 && P.sell54 === 'off')){
+        const fpTo = P.firstPushTo >= 56 ? 56 : 55, fpNow = (s === 54 || (s === 55 && fpTo >= 56)) && firstPushOn() && !R.reached[fpTo];
+        const fillTo = mineFillOn() ? (P.mineFill >= 56 ? 56 : 55) : 0, fillNow = fillTo > 0 && (s === 54 || (s === 55 && fillTo >= 56)) && mineHigh(fillTo) < mineSlotsNow();   // 광산 채우기: 광산이 fillTo강↑ 48기가 될 때까지 54·55강을 안 팔고 위로   // 첫 달성 밀기: 이 판 첫 56강 전까지 54·55강을 안 팔고 위로 (55·56강 첫 달성 크레딧)
+        if (!pushT && !fpNow && !fillNow && s >= T && s >= 52 && !(s === 55 && P.sell55 !== 'on')){
           const k = Math.min(c, Math.floor(A.credits / EX_SELL_CR)); if (k > 0){ sellEx(s, k); c -= k; }
           if (c > 0) rec.noCr.ex += c;
           if (c > 0 && P.overflow === 'stock'){ R.stock[s] += c; c = 0; }
@@ -2166,54 +2230,109 @@ function run(P0, seed, wantLog, init, ext){
       if (!any) break;
     }
   }
+  function mineFillOn(){ return P.mineFill >= 55 && A.exLv >= (P.mineFillEx || 0) && cryLv('c20') >= (P.mineFillU || 0) && !fuseActive(); }
+  function mineHigh(L){ let n = 0; for (let x = L; x <= 59; x++) n += R.hg[x]; return n; }
+  function firstPushOn(){ return P.firstPush === 'on' && A.exLv >= (P.firstPushEx || 0) && cryLv('c20') >= (P.firstPushU || 0) && !fuseActive(); }
   function sellStock(){
     if (P.overflow !== 'stock' || pushT) return;
     for (let s = 55; s >= 52; s--){ const c = R.stock[s]; if (!c || s < T) continue; const k = Math.min(c, Math.floor(A.credits / EX_SELL_CR)); if (k > 0){ sellEx(s, k); R.stock[s] -= k; } }
   }
 
   // ---------- 초월 스탯 ----------
-  // ---------- 응무조 단계 (57강 48기 뒤, condHours > 0 — 2026-10-10) ----------
+  // ---------- 57~60강 판매 · 응축된 무색 조각 ----------
   // 남는 57강: 판매(1만 크레딧, 응무조 바탕 4) 또는 58강 도전(실패하면 파괴) — 1기 값이 큰 쪽. 58·59강도 같은 방식, 60강은 판매(배율 1)
   // 확률(계산기 quasarProbs): 57강 0.5 + 멀티 0.5 + 7쪽-4 0.1/Lv + 특급 보주 0.02/개 · 58강 0.1 + 0.5 + 7쪽-5 0.1/Lv + 고급 보주 0.01/개 · 59강 0.005 (%). 집중·절제·파멸 크리스탈·성운·천운은 뺌
   const condPct = () => (100 + SUP.condAdd + (A.ex['7_6'] || 0)) * SUP.condFin;
-  function condV(){
-    const p57 = Math.min(1, (1 + 0.1 * (A.ex['7_4'] || 0) + 0.02 * A.orb.sp) / 100), p58 = Math.min(1, (0.6 + 0.1 * (A.ex['7_5'] || 0) + 0.01 * A.orb.pr) / 100), p59 = 0.00005;
-    const v59 = Math.max(COND_BASE[59], p59 * COND_BASE[60]), v58 = Math.max(COND_BASE[58], p58 * v59), up57 = P.condPush !== 'off' && p57 * v58 > COND_BASE[57];
-    return {p57, p58, p59, v57: up57 ? p57 * v58 : COND_BASE[57], v58, v59, up57, up58: p58 * v59 > COND_BASE[58], up59: p59 * COND_BASE[60] > COND_BASE[59]};
-  }
-  function condSell(lv, k){
-    const can = Math.min(k, Math.floor(A.credits / 1e4)); if (can < k) rec.cond.noCr += k - can; if (can <= 0) return;
+  // 57·58·59강 강화 확률 (계산기 quasarProbs): 57 = 0.5 + 멀티 0.5 + 7쪽-4 0.1/Lv + 특급 0.02/개 + 성운 0.02/개 · 58 = 0.1 + 0.5 + 7쪽-5 + 고급 0.01/개 + 천운 0.02/개 · 59 = 0.005 + 무위 0.001/개 (%, 파멸 크리스탈은 60강 판매로만 → 없음)
+  const p5759 = () => ({57: Math.min(1, (0.5 + (multiOn() ? 0.5 : 0) + 0.1 * (A.ex['7_4'] || 0) + 0.02 * A.orb.sp + 0.02 * A.orb.nebula) / 100),
+    58: Math.min(1, (0.1 + (multiOn() ? 0.5 : 0) + 0.1 * (A.ex['7_5'] || 0) + 0.01 * A.orb.pr + 0.02 * A.orb.heaven) / 100), 59: Math.min(1, (0.005 + 0.001 * A.orb.void) / 100)});
+  function condSell(lv, k){   // 판 개수를 돌려줌 (크레딧 1만/기가 모자라면 그만큼만)
+    const can = Math.min(k, Math.floor(A.credits / 1e4)); if (can < k) rec.cond.noCr += k - can; if (can <= 0) return 0;
     A.credits -= can * 1e4; const [b, pr, x] = COND_ROLL[lv]; const got = (can * b + (pr > 0 ? binom(can, pr) * x : 0)) * condPct() / 100;
     A.cs += got; rec.cond.cs += got; rec.cond.sold[lv] = (rec.cond.sold[lv] || 0) + can;
-    if (lv === 57){ const g = binom(can, 0.02); if (g) gainCry('c20', 50 * g, '57강 판매'); const u = binom(can, 0.1); if (u) openBoxes('U', 100 * u, '57강 판매'); }   // 갤럭시 2% × 50 · 유니크 10% × 100 (퀘이사 0.002%는 뺌)
+    A.gexp += can * GEN44_SALE * expMult();   // T.020: 57~60강 판매도 44강 판매 일반 경험치
+    if (lv === 57){ const g = binom(can, 0.02); if (g) gainCry('c20', 50 * g, '57강 판매'); const u = binom(can, 0.1); if (u) openBoxes('U', 100 * u, '57강 판매'); { const q = binom(can, 0.00002); A.qbox += q; openBoxes('Q', q, '57강 판매'); } }   // 갤럭시 2% × 50 · 유니크 10% × 100 · 퀘이사 0.002%
+    if (lv === 58){ const g = binom(can, 0.05); if (g) gainCry('c20', 1000 * g, '58강 판매'); const u = binom(can, 0.1); if (u) openBoxes('U', 2000 * u, '58강 판매'); { const q = binom(can, 0.001) + 10 * binom(can, 0.00002); A.qbox += q; openBoxes('Q', q, '58강 판매'); } }   // 갤럭시 5% × 1,000 · 유니크 10% × 2,000 · 퀘이사 0.1% × 1 · 0.002% × 10
+    if (lv === 59){ { const q = 3 * binom(can, 0.01) + 50 * binom(can, 0.0005); A.qbox += q; openBoxes('Q', q, '59강 판매'); } A.asc = (A.asc || 0) + binom(can, 0.0002); }   // 퀘이사 1% × 3 · 0.05% × 50 · 생명·시간 각 0.01% (어센트 — 이 시뮬은 모아 두기만)
+    return can;
   }
-  function condUnit(lv, k){
-    const v = condV();
-    if (lv === 60 || (lv === 57 && !v.up57) || (lv === 58 && !v.up58) || (lv === 59 && !v.up59)) return condSell(lv, k);
-    const s = binom(k, lv === 57 ? v.p57 : lv === 58 ? v.p58 : v.p59);
-    rec.cond.tried[lv] = (rec.cond.tried[lv] || 0) + k;
-    if (s){ rec.cond.made[lv + 1] = (rec.cond.made[lv + 1] || 0) + s; if (!rec.cond.firstT[lv + 1]){ rec.cond.firstT[lv + 1] = t; L(`첫 ${lv + 1}강 (응무조 단계)`); } condUnit(lv + 1, s); }
+  // ---------- 목표 첫 60강 (goal60, 2026-10-12) ----------
+  // 57~59강이 그 판에서 처음 나옴: 첫 달성 크레딧(판마다, 성취·각성 자릿수 배수) · 엑보 유닛이 더 높은 강으로 바뀜(fiSwapAll)
+  function firstMade(lv){
+    if (!R.reached[lv]){ R.reached[lv] = 1; const fm = Math.pow(1.5, awDigits(A.awaken)) * (1 + 0.1 * (A.gems.achieve || 0)); if (FIRST_CR[lv]) addCredits(FIRST_CR[lv] * fm, 'first'); if (lv < 60 && s0fi(lv)) fiOffer(lv); }
+    if (rec.firstT[lv] === undefined){ rec.firstT[lv] = t; (rec.firstEx || (rec.firstEx = {}))[lv] = A.exLv; L(`첫 ${lv}강${lv === 57 ? ` (융합 ${rec.fuseAtt}번째 시도, 확률 ${fusePf().toFixed(1)}%)` : ''} (초월 ${A.exLv.toLocaleString()})`); }
   }
-  // 보주 사기: orbOrder가 있으면 그 순서(앞 항목을 다 살 때까지 모음), 없으면 효율(ln 시간당 응무조 증가 ÷ 비용) — 경험의 보주는 초월 EXP orbExpH시간치 × EXP 1당 값, 채광은 안 삼
+  const s0fi = lv => R.ready && P.fiUnit === 'auto';
+  // lv강(57~59) 1기를 사냥터(광산) 48칸에 넣음: 빈칸이면 넣고, 꽉 차면 lv보다 낮은 가장 낮은 유닛과 교체 — 빠진 57·58강은 다시 unit60으로
+  function placeTop(lv){
+    if (!R.ready || mineSlotsNow() <= 0) return false;
+    let tot = 0; for (let x = 41; x <= 59; x++) tot += R.hg[x];
+    let out = 0; if (tot >= 48){ for (let x = 41; x < lv; x++) if (R.hg[x] > 0){ out = x; break; } if (!out) return false; R.hg[out]--; }
+    R.hg[lv]++; prodDirty = true;
+    if (out >= 57) unit60(out, 1);
+    return true;
+  }
+  // 판매 1기 vs 위로 1기 (sell60 auto): 판매 응무조 × 보주 한계효율(ln 60강 생산 속도 / 응무조, R.orbSc) × 57강 유입(시간당) × sellH시간 > 1이면 팜.
+  //  위로 보낸 57강 1기 = 60강 p57·p58·p59기, 판매 1기 = 시간당 60강을 got × sc만큼 늘림 → 58강은 p57배, 59강은 p57·p58배로 판매가 덜 이득
+  function sellN60(lv, k){
+    // q59Rule(2026-10-14): 59강은 퀘이사 길운·집중·절제·증식이 모두 이 단계가 될 때까지 전부 팔고, 그 뒤엔 다 60강 도전 (0 = 아래 판단). 특급 171 상태 22판: 첫 60강 −6.1±0.5h · 60강 20기 −43.3±0.4h (10이 7보다 20기 −9.8h)
+    //   59강 1기 응무조는 도전(0.005% × 60강 25억 = 12.5만)이 판매(2만)보다 크지만 퀘이사 상자(마리당 0.055개)가 첫 60강 전에 판을 바꿔 놓음 — 응무조만 보는 아래 판단은 60강 수입이 생기면 59강을 안 팔게 돼 60강 20기가 +40h↑
+    if (lv === 59 && P.q59Rule > 0) return ['c21','c23','c24','c26'].some(c => cryLv(c) < P.q59Rule) ? k : 0;
+    const q = p5759(), got = COND_BASE[lv] * condPct() / 100, f = lv === 57 ? 1 : lv === 58 ? q[57] : q[57] * q[58];
+    const H = lv === 59 && P.sell59H >= 0 ? P.sell59H : P.sellH;   // sell59H(시험): 59강만 따로 (0 = 59강 안 팜)
+    const rate = lv === 59 ? Math.max(1, A.r59p || 0) : f * Math.max(1, A.r57 || 0);   // 59강: 실제로 60강에 도전하는 59강 시간당(A.r59p) — 예전엔 57강 유입 × q57·q58(= 59강 전체 생산)이라 59강을 거의 다 팔고 있어도 판매 이득을 크게 잡아 폭주(길운 2026-10-13: 59강 208만 기 판매)
+    if (!((R.orbSc || 0) * got * rate * H > 1)) return 0;
+    if (lv < 59 && q[lv] * COND_BASE[lv + 1] > COND_BASE[lv]) return 0;   // 한 단계 위에서 팔면 응무조가 더 많으면 위로 (사용자 2026-10-13: 58강으로 광산 채우고 57이든 58이든 파는 게 나음)
+    return k;
+  }
+  function unit60(lv, k){
+    if (k <= 0 || done) return;
+    rec.unit60.in[lv] = (rec.unit60.in[lv] || 0) + k;
+    if (lv >= 60){ firstMade(60); rec.n60 = (rec.n60 || 0) + k; if (rec.first60T === undefined) rec.first60T = t;
+      if (P.goal60End === 'e1') return;   // 비교용: 실제 60강은 세기만 하고 60강 기대값 1기까지 계속 (운을 뺀 비교)
+      rec.done = true; rec.t = t; done = true; L(`목표: 첫 60강! (59강 도전 ${fmtN(rec.cond.tried[59] || 0)}번째 · 초월 ${A.exLv.toLocaleString()} · 단수 ${fmtN(A.awaken)})`); return; }
+    const cap = lv === 57 ? 48 : lv === 58 ? P.mine58 : P.mine59;
+    while (k > 0 && R.hg[lv] < cap && placeTop(lv)){ k--; rec.unit60.mine[lv] = (rec.unit60.mine[lv] || 0) + 1; }
+    if (k <= 0) return;
+    if (lv === 57) A.n57dec = (A.n57dec || 0) + k;   // 광산 뒤 남는 57강 (판매·위로 판단에 들어온 수, 시간당 A.r57)
+    const ks = sellN60(lv, k); if (ks > 0){ const sold = condSell(lv, ks); rec.unit60.sold[lv] = (rec.unit60.sold[lv] || 0) + sold; k -= sold; }
+    if (k <= 0) return;
+    const p = p5759()[lv], s = binom(k, p), fl = k - s;
+    rec.cond.tried[lv] = (rec.cond.tried[lv] || 0) + k; rec.unit60.push[lv] = (rec.unit60.push[lv] || 0) + k; if (lv === 59) A.n59push = (A.n59push || 0) + k;
+    if (lv === 59){ const e0 = rec.e60; rec.e60 += k * p; for (const th of [0.5, 0.693, 1]) if (e0 < th && rec.e60 >= th && rec.e60T[th] === undefined){ rec.e60T[th] = t; L(`60강 기대값 ${th}기 (59강 도전 ${fmtN(rec.cond.tried[59])}번)${th === 0.693 ? ' — 여기가 첫 60강 시각의 중앙값' : ''}`); }
+      if (P.goal60End === 'e1' && rec.e60 >= 1 && !done){ rec.done = true; rec.t = t; done = true; L(`비교 끝: 60강 기대값 1기 (실제 60강 ${rec.n60 || 0}기)`); } }
+    if (fl > 0) A.gexp += fl * GEN44_FAIL * expMult();   // 파괴 실패 일반 경험치 (44강과 같은 몫)
+    if (s > 0){ rec.cond.made[lv + 1] = (rec.cond.made[lv + 1] || 0) + s; if (lv + 1 < 60) firstMade(lv + 1); unit60(lv + 1, s); }
+  }
+  // 보주 사기: 효율(ln 시간당 응무조 증가 ÷ 비용) — 경험의 보주는 초월 EXP orbExpH시간치 × EXP 1당 값, 채광은 안 삼
   let orbAcc = {}, orbLogT = -1e18;
+  // 보주 단계(orbStage, 2026-10-14): 57강을 파는 동안 특급·고급은 수입을 안 늘림(58·59강 도전 때부터 쓰임) → 특급은 상급 100 뒤(첫 58강 전까지), 고급·경험은 특급 500 · 지위 500 뒤에 삼.
+  //   판매 판단(R.orbSc)은 그대로 모든 보주로 잼. 초월 2,340 상태 48판 −4.35±0.55h · 초월 1,816 상태 32판 −3.81±0.72h
+  // v49Mode(2026-10-14): 'on'이면 융합·60강 단계에 자판기 2가 52강 대신 같은 값 49강 12기(단수) — 끄는 게 빠름(초월 2,572 · 57강 48기 상태 32판 −6.9±2.2h, 몇 판은 켜면 크게 막힘 · 초월 1,816 상태 32판 −1.6±0.8h), 사용자도 「이제 단수는 하지 말고」
+  const orbHeld = k => P.orbStage !== 'off' && ((k === 'sp' && A.orb.high < 100 && rec.firstT[58] === undefined) || ((k === 'pr' || k === 'exp') && !(A.orb.sp >= 500 && A.orb.status >= 500)));
   function buyOrbs(){
-    if (!A.condOn || P.orbMode === 'off' || !(A.cs >= 2)) return;
-    const S = spec(); let bought = false;
-    if (P.orbOrderArr.length){
-      for (const [k, tg] of P.orbOrderArr){ const O = ORBC[k]; if (!O) continue; const cap = Math.min(O.max, tg); while (A.orb[k] < cap){ const c = O.f(A.orb[k] + 1); if (c > A.cs) break; A.cs -= c; rec.cond.orbSpent += c; A.orb[k]++; orbAcc[k] = (orbAcc[k] || 0) + 1; bought = true; } if (A.orb[k] < cap) break; }
-    } else {
-      let n50 = prod ? prod.n50 : prodCalc(S).n50;
+    // aw12(2026-10-14): 융합·60강 단계에서 처음 52/52가 되면 자판기 둘 다 49강 12기로 단수를 aw12까지 몬 뒤, 그 뒤로는 단수 안 함(남는 돈도 52·53강)
+    if (P.aw12 > 0 && (A.fuseOn || A.condOn)){ if (!A.v52seen && prod && prod.vend && prod.vend.a >= 52 && prod.vend.b >= 52){ A.v52seen = true; L(`자판기 52/52 → 단수 몰기 시작 (49강 12기 두 대, 목표 ${fmtN(P.aw12)})`); prodDirty = true; } if (A.v52seen && !A.aw12Done && A.awaken >= P.aw12){ A.aw12Done = true; L(`단수 ${fmtN(A.awaken)} → 몰기 끝, 이제 단수 안 함`); prodDirty = true; } }
+    if (!A.condOn || (!(A.cs >= 2) && P.goal60 !== 'on')) return;   // 목표 60강: 응무조가 없어도 한계효율(R.orbSc)은 잼
+    const S = spec(); let bought = false; const nAlt = S.n12; S.n12 = false;   // 보주 효율은 몰기 안 할 때(52강) 기준으로 잼 — 몰기 중 n50eq로 재면 지위 등이 쓸모없게 보여 멈춤
+    {
+      let n50 = nAlt ? prodCalc(S).n50eq : (prod ? prod.n50eq : prodCalc(S).n50eq);
       const score = x => Math.log(Math.max(1e-300, x)) + objective(P.goal);
+      // 생산 보주(힘·지위·권력·신위·절명·폭식)는 그 강이 사냥터에 있을 때만 잼 (prodCalc가 무거움)
+      const prodOn = k => k === 'power' ? R.hg[57] > 0 : k === 'status' ? R.hg[58] > 0 : k === 'might' ? R.hg[59] > 0 : mineCount() > 0;
       for (let it = 0; it < 400; it++){
-        const base = score(n50); let best = null;
-        for (const k in ORBC){ const O = ORBC[k], n = A.orb[k]; if (n >= O.max || k === 'mine') continue; const c = O.f(n + 1); if (c > A.cs) continue;
+        const base = score(n50); let best = null, bestAny = 0;
+        for (const k in ORBC){ const O = ORBC[k], n = A.orb[k]; if (n >= O.max || k === 'mine') continue; const c = O.f(n + 1); if (c > A.cs && it > 0) continue;
+          const isProd = ORB_PROD.includes(k); if (isProd && !prodOn(k)) continue;
           let g;
           if (k === 'exp'){ const add = SUP.exAdd + C.exPct + 100 * n; g = perExpNow() * exEMA * xMul() * (100 / (100 + add)) * P.orbExpH; }
-          else { A.orb[k]++; const n2 = k === 'power' ? prodCalc(Object.assign({}, S, {power:A.orb.power})).n50 : n50; g = score(n2) - base; A.orb[k]--; }
-          const sc = g / c; if (g > 1e-15 && (!best || sc > best.sc)) best = {k, c, sc}; }
+          else { A.orb[k]++; const n2 = isProd ? prodCalc(S).n50eq : n50; g = score(n2) - base; A.orb[k]--; }   // S.orb = A.orb (같은 객체)
+          const sc = g / c; if (g > 1e-15 && sc > bestAny) bestAny = sc;
+          if (c <= A.cs && g > 1e-15 && (!best || sc > best.sc) && !orbHeld(k)) best = {k, c, sc}; }
+        if (it === 0) R.orbSc = bestAny;   // 판매 판단(sell60 auto)용: 응무조 1당 ln(60강 생산 속도) 한계효율 (지금 못 사는 보주 포함)
         if (!best) break;
         A.cs -= best.c; rec.cond.orbSpent += best.c; A.orb[best.k]++; orbAcc[best.k] = (orbAcc[best.k] || 0) + 1; bought = true;
-        if (best.k === 'power') n50 = prodCalc(Object.assign({}, S, {power:A.orb.power})).n50;
+        if (ORB_PROD.includes(best.k)) n50 = prodCalc(S).n50eq;
       }
     }
     if (bought){ prodDirty = true; exDirty = true; }
@@ -2223,11 +2342,11 @@ function run(P0, seed, wantLog, init, ext){
     const p = probs(), q = p.map(v => Math.max(1e-12, v / 100));
     let v = Math.log(q[0]); if (Tobj >= 52) v += Math.log(q[1]); if (Tobj >= 53) v += Math.log(q[2]); if (Tobj >= 54) v += Math.log(q[3]);
     if (Tobj >= 55){ const a = q[4] / (1 - (1 - q[4]) * q[3]); v += Math.log(a); if (Tobj >= 56) v += Math.log(q[5] / (1 - (1 - q[5]) * a)); }
-    if (A.condOn) v += Math.log(condV().v57 * condPct() / 100) - Math.log(fuseNeed());   // 응무조 단계: 시간당 응무조 = 56강 × 융합 확률 ÷ 필요 수 × 57강 1기 값 × 획득량
+    if (A.condOn){ const r = p5759(); v += Math.log(r[57]) + Math.log(r[58]) + Math.log(r[59]) - Math.log(fuseNeed()); }   // 60강 단계: 시간당 60강 = 56강 × 융합 확률 ÷ 필요 수 × p57 · p58 · p59
     if (fuseActive()) v += Math.log(Math.max(1e-9, fusePf() / 100));   // 융합 중: 7쪽-3(융합 확률)도 같은 저울에 (57강 = 56강 × 융합 확률)
     return v;
   }
-  function dpsNow(){ let d = 0; for (let s = 51; s <= 56; s++) if (R.hg[s]) d += R.hg[s] * U5[s].atk * (10 + (A.ex['6_' + (s - 50)] || 0) + C.upg) / 10 * U5[s].hit; return d + 0.5 * (prod ? prod.lowHits : 0); }
+  function dpsNow(){ let d = 0; for (let s = 51; s <= 56; s++) if (R.hg[s]) d += R.hg[s] * U5[s].atk * (10 + (A.ex['6_' + (s - 50)] || 0) + C.upg) / 10 * U5[s].hit; return d * (P.dpsMul > 0 ? P.dpsMul : 1) + 0.5 * (prod ? prod.lowHits : 0); }   // dpsMul: 허수광산 DPS 보정(비교용 — 실제 54강 공업 등)
   function allocDpsAtk(){
     if (P.dpsAtk !== 'on' || !R.ready || R.dpsIdx >= DPS_REW.length) return;
     const m = mineCount(); if (m < Math.max(1, mineSlotsNow() * 0.9)) return;     // 광산 칸이 거의 찼을 때만
@@ -2260,20 +2379,20 @@ function run(P0, seed, wantLog, init, ext){
   function allocEx(){
     allocDpsAtk();
     const ex0 = Object.assign({}, A.ex);
-    const Tobj = P.exTarget === 'sale' ? T : P.goal;
-    if (A.condOn && P.condStatArr.length){   // condStat: 응무조 단계에서 먼저 찍을 초월 스탯 (순서대로, 비교용)
-      for (const [k, tg] of P.condStatArr){ const [mx, cost] = EX_DEF[k], cap = Math.min(mx, tg); while ((A.ex[k] || 0) < cap && A.expts >= cost){ A.ex[k] = (A.ex[k] || 0) + 1; A.expts -= cost; } if ((A.ex[k] || 0) < cap) break; }
-      if (P.condStatArr.some(([k, tg]) => (A.ex[k] || 0) < Math.min(EX_DEF[k][0], tg))){ noteAlloc(exAcc, ex0, A.ex); exDirty = false; lastExAlloc = t; prodDirty = true; return; }
-    }
-    let pts = A.expts, base = objective(Tobj);
+    const Tobj = cryLv('c20') < (P.exSwitchU > 0 ? P.exSwitchU : P.tSwitchU) && !fuseActive() ? 54 : P.goal;   // 우주 +N 전(54강 판매 중)엔 54강까지의 확률만, 그 뒤 목표 강
+    let pts = A.expts, base = objective(Tobj), g8 = null;
+    // 초월 8쪽 1·2칸(자판기 촉진 +1,000/회, 50,000P): ln(시간당 50강) 증가로 잼 (8쪽-3 광산 채취효율은 크레딧이라 자동으로 안 찍음 — condStat으로)
+    const gain8 = () => { const S8 = spec(), n0 = prodCalc(S8).n50eq; A.ex['8_1'] = (A.ex['8_1'] || 0) + 1; const n1 = prodCalc(S8).n50eq; A.ex['8_1']--; return n0 > 0 && n1 > 0 ? Math.log(n1 / n0) : 0; };
     for (let it = 0; it < 300; it++){
       let best = null;
       for (const k of EX_PROB_KEYS){ const [mx, cost] = EX_DEF[k], lv = A.ex[k] || 0; if (lv >= mx) continue;
         A.ex[k] = lv + 1; const g = objective(Tobj) - base; A.ex[k] = lv;
         const sc = g / cost; if (g > 1e-12 && (!best || sc > best.sc)) best = {k, sc, cost, mx, lv}; }
+      if (pts >= 50000 && P.ex8 !== 'off'){ if (g8 === null) g8 = gain8();
+        for (const k of ['8_1','8_2']){ const lv = A.ex[k] || 0; if (lv >= 40000) continue; const sc = g8 / 50000; if (g8 > 1e-12 && (!best || sc > best.sc)) best = {k, sc, cost:50000, mx:40000, lv, p8:true}; } }
       if (!best || best.cost > pts) break;
       const q = Math.max(1, Math.floor(Math.min(best.mx - best.lv, Math.floor(pts / best.cost)) / 10));
-      A.ex[best.k] = best.lv + q; pts -= q * best.cost; base = objective(Tobj);
+      A.ex[best.k] = best.lv + q; pts -= q * best.cost; base = objective(Tobj); if (best.p8){ g8 = null; prodDirty = true; }
     }
     A.expts = pts; exDirty = false; lastExAlloc = t;
     noteAlloc(exAcc, ex0, A.ex);
@@ -2306,13 +2425,13 @@ function run(P0, seed, wantLog, init, ext){
   function buyGems(){
     if (P.gemMode !== 'auto' || !R.ready || !(A.sh > 0)) return;
     const S = spec(), gems = A.gems, p0 = probs()[0];
-    const score = () => { const pr = prodCalc(S); const p50 = Math.min(100, 0.01 * A.exLv + 0.1 * (A.ex['5_1'] || 0) + 0.001 * (gems.patience || 0) + C.p50); return Math.log(Math.max(1e-9, pr.n50)) + Math.log(Math.max(1e-12, p50)); };
+    const score = () => { const pr = prodCalc(S); const p50 = Math.min(100, 0.01 * A.exLv + 0.1 * (A.ex['5_1'] || 0) + 0.001 * (gems.patience || 0) + C.p50); return Math.log(Math.max(1e-9, pr.n50eq)) + Math.log(Math.max(1e-12, p50)); };
     let base = score(), spent = 0, bought = {};
     const exp0 = gems.exp || 0, expCap = Math.max(0, ...P.gemFirstArr.filter(([k]) => k === 'exp').map(([, v]) => Math.min(GEMC.exp.max, v)));
     // 먼저 살 보석(목록 순서·목표 개수): 다음 1개를 못 사면 그 값만큼 남겨 두고 모은다
     let reserve = 0;
     for (const [k, target] of P.gemFirstArr){ const G = GEMC[k], cap = Math.min(G.max, target);
-      while ((gems[k] || 0) < cap){ const c = G.f((gems[k] || 0) + 1); if (c > A.sh){ reserve = P.gemFirstMode === 'free' ? 0 : c; break; } A.sh -= c; spent += c; rec.shSpent += c; gems[k] = (gems[k] || 0) + 1; bought[k] = (bought[k] || 0) + 1; }
+      while ((gems[k] || 0) < cap){ const c = G.f((gems[k] || 0) + 1); if (c > A.sh) break; A.sh -= c; spent += c; rec.shSpent += c; gems[k] = (gems[k] || 0) + 1; bought[k] = (bought[k] || 0) + 1; }
       if ((gems[k] || 0) < cap) break; }   // 「모음」: 다음 1개 값만큼 남겨 둠 · 「살 수 있을 때만」: 생산 보석을 막지 않음
     for (let it = 0; it < 12; it++){
       let best = null;
@@ -2342,9 +2461,9 @@ function run(P0, seed, wantLog, init, ext){
         case 'make': ok = !!R.reached[m.lv]; break;
         case 'level': ok = A.level >= m.lv; break;
         case 'race': ok = raceTotal() >= m.n; break;
-        case 'hold': ok = m.lv <= 40 ? (P.m40Later === 'nextRoom' && rec.runs >= 2 && t - R.t0 >= P.m40Sec) : (R.hg[m.lv] >= m.n || (P.missionFix !== 'off' && !!R.reached[m.lv] && t - R.t0 >= P.m40Sec)); break;   // 40강 48기 보유(40강 풀을 건너뛴 경우): 다음 판 시작 때 40강을 잠깐 48기 들고 깸 · 46강 48기(missionFix): 그 판에서 46강이 나오고 m40Sec 뒤 (잠깐 48기 쥠)
-        case 'sellN': ok = (rec.soldBy[m.lv] || 0) - (A.missionMark || 0) >= m.n || (P.missionFix !== 'off' && !!R.reached[m.lv] && t - R.t0 >= P.m40Sec); break;   // missionFix: 뒤 단계에서 안 파는 강(46·48강 12기)도 미션이면 바로 팜
-        case 'sell': ok = (rec.soldBy[m.lv] || 0) > 0 || (P.missionFix !== 'off' && !!R.reached[m.lv]); break;   // missionFix: 45강 판매 미션 (뒤 단계는 45강을 안 팔아서 예전엔 35번부터 끝까지 막힘)
+        case 'hold': ok = m.lv <= 40 ? (rec.runs >= 2 && t - R.t0 >= P.m40Sec) : (R.hg[m.lv] >= m.n || (!!R.reached[m.lv] && t - R.t0 >= P.m40Sec)); break;   // 40강 48기 보유(40강 풀을 건너뛴 경우): 다음 판 시작 때 40강을 잠깐 48기 들고 깸 · 46강 48기(missionFix): 그 판에서 46강이 나오고 m40Sec 뒤 (잠깐 48기 쥠)
+        case 'sellN': ok = (rec.soldBy[m.lv] || 0) - (A.missionMark || 0) >= m.n || (!!R.reached[m.lv] && t - R.t0 >= P.m40Sec); break;   // missionFix: 뒤 단계에서 안 파는 강(46·48강 12기)도 미션이면 바로 팜
+        case 'sell': ok = (rec.soldBy[m.lv] || 0) > 0 || !!R.reached[m.lv]; break;   // missionFix: 45강 판매 미션 (뒤 단계는 45강을 안 팔아서 예전엔 35번부터 끝까지 막힘)
         case 'statmax': ok = (A.st[m.key] || 0) >= STAT_DEF[m.key][0]; break;
         default: ok = true;   // 초반 미션 (앞 단계에서 끝남)
       }
@@ -2369,7 +2488,8 @@ function run(P0, seed, wantLog, init, ext){
     if (A.awg <= 0 || raceTotal() < 106) return;
     let Lv = A.awaken;
     if (Lv < 1e6){ const b = 2 * Lv + 1, k = Math.floor((-b + Math.sqrt(b * b + 8 * A.awg)) / 2); if (k > 0){ const kk = Math.min(k, 1e6 - Lv); A.awg -= kk * (2 * Lv + kk + 1) / 2; Lv += kk; } }
-    else { for (let g = 0; g < 1000; g++){ const c = (Lv + 1) * 100 + 5050; if (A.awg < c) break; A.awg -= c; Lv += 100; } }
+    // 100만 단 이상: 100단 묶음 n개 비용 = 5000n² + (100L + 150)n (awLvAfter와 같음) — 2026-10-14 고침: 예전엔 한 번에 최대 1,000묶음(10만 단)이라 dt 60초면 단수가 시간당 600만에서 막히고 각보가 쌓이기만 했음
+    if (Lv >= 1e6 && A.awg > 0){ const a = 5000, b = 100 * Lv + 150; let n = Math.floor(2 * A.awg / (b + Math.sqrt(b * b + 4 * a * A.awg))); while (n > 0 && a * n * n + b * n > A.awg) n--; if (n > 0){ A.awg -= a * n * n + b * n; Lv += 100 * n; } }
     if (Lv !== A.awaken){ const crossed = Math.floor(Lv / 500) !== Math.floor(A.awaken / 500); A.awaken = Lv; if (crossed || Lv > awAtProd * 1.01 + 1) prodDirty = true; const dg = String(Math.floor(Lv)).length; if (rec.awDT[dg] === undefined) rec.awDT[dg] = t; }   // awDT: 단수 자릿수별 처음 시각
   }
   // ---------- ExPoint ----------
@@ -2381,21 +2501,38 @@ function run(P0, seed, wantLog, init, ext){
     want('spec', 500, P.specCoupon === 'on' && A.ep >= 500 + 100);   // 특수확률 +5% 쿠폰 (40~43강 원확률 +5%p)
     if (A.cp.spec > 0 && !R.specOn){ R.specOn = true; prodDirty = true; } else if (!(A.cp.spec > 0) && R.specOn){ R.specOn = false; prodDirty = true; }
     const mUnits = R.ready ? mineCount() : 0;
-    if (P.mineStep > 0 && mUnits > 0){
-      const drain = P.mineStep * (1000 / (prod ? prod.fms : 19));
-      const target = mineThr(P.mineStep) + drain * 600;
-      if (A.minePts < mineThr(P.mineStep) + drain * dt * 1.5){ const buy = Math.min(100000, Math.ceil((target - A.minePts) / MINE_PT_PER_EP)); const can = Math.min(buy, Math.floor(A.ep)); if (can > 0){ A.ep -= can; A.minePts += can * MINE_PT_PER_EP; rec.epSpent.mine += can; } }
+    // 광산 단: fixed = 광산에 유닛이 있으면 늘 mineStep · auto = 가진 ExPoint(+ 지금 포인트)로 그 단을 mineHoldH시간 버틸 수 있는 가장 높은 단 (ExPoint가 쌓이면 20단까지)
+    let tgt = 0; const fps = 1000 / frameMsOf(A.level, A.exLv);
+    if (P.mineStep > 0 && mUnits > 0 && !(P.mineFrom === 'fuse' && !fuseActive() && !A.condOn)){   // mineFrom fuse: 융합 전엔 광산 포인트를 안 사고 ExPoint를 모아 둠
+      if (P.mineMode === 'fixed') tgt = P.mineStep;
+      else { const avail = A.ep + A.minePts - P.epReserve - 1e4; for (let k = P.mineStep; k >= 2; k--) if (avail >= mineThr(k) + k * fps * 3600 * P.mineHoldH){ tgt = k; break; } }   // 1단은 ×1(0단과 같음)이라 안 삼
+    }
+    if (tgt !== (R.mineTgt || 0) && (rec.mineLogN = (rec.mineLogN || 0) + 1) <= 40) L(`광산 단 ${R.mineTgt || 0} → ${tgt} (ExPoint ${fmtN(A.ep)} · 광산 포인트 ${fmtN(A.minePts)})`);
+    R.mineTgt = tgt;
+    if (tgt > 0){
+      const drain = tgt * fps, target = mineThr(tgt) + drain * 600;
+      if (A.minePts < mineThr(tgt) + drain * dt * 1.5){ const buy = Math.ceil((target - A.minePts) / MINE_PT_PER_EP); const can = Math.min(buy, Math.floor(A.ep)); if (can > 0){ A.ep -= can; A.minePts += can * MINE_PT_PER_EP; rec.epSpent.mine += can; rec.mineEp += can; } }
     }
     want('mine2x', 1e4, P.mine2x === 'on' && mUnits > 0 && A.ep >= 1e4 + 2000);
     want('special', 1e4, P.special === 'on' && A.ep >= 1e4 + P.epReserve);
     const spare = A.ep - P.epReserve - 1e4 - (P.spareKeep || 0);   // spareKeep: 상자·크레딧으로 바꿀 때 더 남겨 둘 ExPoint (긴 판·자는 동안 특핫·광산 2배가 안 꺼지게)
     if (spare >= 1000){
       if (P.epSpare === 'credit'){ const k = Math.floor(spare); A.ep -= k; addCredits(k * 1000, 'ep'); rec.epSpent.credit += k; }
-      else if (P.epSpare === 'box'){ const k = Math.floor(spare / 1000); if (k > 0){ A.ep -= k * 1000; rec.epSpent.box += k * 1000; openBoxes('N', k, 'ExPoint 상자'); } }
+      else if ((P.epSpare === 'boxRareU' || P.epSpare === 'boxNormU') && cryLv('c20') < P.tSwitchU && cryLv('c2') >= 10 && cryLv('c3') >= 10){   // 행운·경험 +10 뒤: boxRareU = 레어 상자 · boxNormU = 모아 둠 (비교용)
+        if (P.epSpare === 'boxRareU'){ const k = Math.floor(spare / 40000); if (k > 0){ A.ep -= k * 40000; rec.epSpent.box += k * 40000; rec.rareBoxEP = (rec.rareBoxEP || 0) + k; openBoxes('R', k, 'ExPoint 레어 상자'); } } }
+      else if (P.epSpare === 'box' || ((P.epSpare === 'boxPreU' || P.epSpare === 'boxRareU' || P.epSpare === 'boxNormU') && cryLv('c20') < P.tSwitchU)){ const k = Math.floor(spare / 1000); if (k > 0){ A.ep -= k * 1000; rec.epSpent.box += k * 1000; openBoxes('N', k, 'ExPoint 상자'); } }
       else if (P.epSpare === 'rare'){ const k = Math.floor(spare / 40000); if (k > 0){ A.ep -= k * 40000; rec.epSpent.box += k * 40000; rec.rareBoxEP = (rec.rareBoxEP || 0) + k; openBoxes('R', k, 'ExPoint 레어 상자'); } }   // 레어 크리스탈 상자 = ExPoint 40,000 (상점_환율)
     }
   }
   function gainEP(x, why){ A.ep += x; rec.epGain += x; L(`${why}: ExPoint +${fmtN(x)}`); }
+  // 판 즉시 복구: fastSecA초에 지난 판 구성을 53강까지(자판기로 바로 사는 강), fastSecB초에 54강 이상 자리를 54강으로 (55강↑은 자판기가 못 사서 54강)
+  function fastRestore(){
+    const ph = R.prevHg; if (!ph){ R.fastA = R.fastB = true; return; }
+    if (!R.fastA){ R.fastA = true; R.hg.fill(0); let top = 0, n54 = 0;
+      for (let lv = 41; lv <= 59; lv++){ const k = ph[lv]; if (!k) continue; const to = Math.min(lv, 53); R.hg[to] += k; if (lv >= 54) n54 += k; if (to > top) top = to; }
+      R.n54 = n54; if (top) firstClear(top); prodDirty = true; return; }
+    R.fastB = true; const n = Math.min(R.n54 || 0, R.hg[53]); if (n > 0){ R.hg[53] -= n; R.hg[54] += n; firstClear(54); prodDirty = true; }
+  }
   // ---------- 판 준비 완료 (사냥터 50강 채움 · 20~49강 첫 달성 · 보스 1~5) ----------
   function runReady(){
     R.ready = true; prodDirty = true;   // 통합: 사냥터는 비어서 시작해 도착하는 유닛으로 채움 (placeHunt)
@@ -2425,36 +2562,32 @@ function run(P0, seed, wantLog, init, ext){
   // 엑보 FI 누적 타수 (24프레임당): 판에서 넣은 1기의 값 (50강 이하는 타수, 51강 이상은 공격력 × 피해 배수). 고정이면 입력값
   const roomIdx = () => (init ? (init.rerolls || 0) : 0) + rec.runs - 1;   // 판 번호(0부터, 앞 단계 판 포함 — 넘겨받은 판 = 앞 단계 마지막 판)
   const fiRateNow = () => (P.fiUnit !== 'auto' ? P.fiHit : R.fiRate) * ((P.fiMultiN > 1 && roomIdx() < (P.fiMultiRooms || 0)) ? P.fiMultiN : (P.fiMultiN2 > 1 ? P.fiMultiN2 : 1));
-  const mineSlotsNow = () => (P.mineSlotsLate > 0 && P.goalCry > 0 && lateActive()) ? Math.min(48, P.mineSlotsLate) : P.mineSlots;   // mineSlotsLate: 긴 판(첫 56강 뒤)부터 광산 칸
-  // 긴 판 시작: lateFrom 'start' 뒤 단계 처음부터 · 'f54'·'f55'·'f56' 그 강을 처음 뽑은 뒤 · 'x30'처럼 초월 레벨 30부터
-  function lateActive(){
-    if (!(P.goalCry > 0)) return false;   // 목표 강에서 끝나므로 긴 판 없음
-    const lf = String(P.lateFrom || 'start');
-    if (lf === 'start') return true;
-    if (lf[0] === 'f') return rec.firstT[+lf.slice(1)] != null;
-    if (lf[0] === 'x') return A.exLv >= +lf.slice(1);
-    return true;
-  }
+  const mineSlotsNow = () => P.mineSlots;
+  function qSumNow(){ return ['c21', 'c23', 'c24', 'c26'].reduce((a, k) => a + Math.max(0, cryLv(k)), 0); }
   function shouldReboot(){
-    if (P.reboot === 'never' || !R.ready) return false;
+    if (!R.ready) return false;
     if (R.forceReboot) return true;   // 융합 시작: 초월 스탯을 다시 찍으려고 바로 새 판
-    if (fuseActive()){   // 융합 중: 진행도를 버리지 않게 (fuseRoom)
-      if (P.fuseRoom === 'never') return false;
-      if (P.fuseRoom === 'untilFirst' && R.n57 > 0) return false;   // 첫 57강이 나온 판은 그대로 57강 48기까지
-      if ((P.fuseRoom === 'attempt' || P.fuseRoom === 'untilFirst') && (!((rec.fuseAtt || 0) > R.fuseAtt0) || R.fuseProg > 0.02 * fuseNeed())) return false;
+    if (P.goal60 === 'on' && A.condOn){   // 60강 단계 판(room60): never = 리방 안 함 · hN = 판이 N시간 되면 리방(57강↑ 잃음) · day = 엑보 새 묶음이 열린 날이 되면 리방(판 시작 날짜 기준)
+      const r6 = String(P.room60 || 'never'), age6 = t - R.t0;
+      if (r6[0] === 'h') return age6 >= (+r6.slice(1) || 24) * 3600;
+      if (r6[0] === 'q') return age6 >= (+r6.slice(1) || 24) * 3600 && qSumNow() - (R.qSum0 || 0) >= (P.room60Q || 4);   // qN: N시간이 지났고, 이 판을 연 뒤 퀘이사(길운·집중·절제·증식) 단계 합이 room60Q 이상 늘었을 때만 리셋
+      if (r6 === 'day') return fiMaxIdxNow() > R.fiMaxIdx && age6 >= 1800;
+      return false;
     }
+    if (fuseActive()) return false;   // 융합 중엔 리방 안 함 (진행도·광산 57강이 사라짐)
     const age = t - R.t0;
     // 넘겨받은 판(앞 단계 2번째 판)은 엑보 25,000타를 받을 때까지 리방을 미룸 (wait25kHand분까지, 0 = 바로 리방)
     if (R.fromInit && P.wait25kHand > 0 && R.fiStage < 2 && t - R.handT < P.wait25kHand * 60) return false;
-    if (P.reboot === 'interval') return age >= P.rebootMin * 60;
     if (P.reboot === 'interval25k') return age >= P.rebootMin * 60 && (R.fiStage >= 2 || age >= P.rebootMaxMin * 60);   // 간격이 지났고 엑보 25,000타를 받았으면 (못 받았으면 최대 간격까지 기다림)
     // 사건 기준: 엑보 25,000타(rbNeed25k) · 이 판에서 rbLv강 첫 달성 · 허수광산 DPS 보상 rbDps단계를 모두 받으면 rbExtraMin분 더 하고 리방 (rebootMaxMin분이면 무조건)
     if (P.reboot === 'event'){
-      const ok = (P.rbNeed25k !== 'on' || R.fiStage >= 2) && (!(P.rbLv > 0) || R.reached[Math.min(56, P.rbLv)]) && R.dpsIdx >= Math.min(P.rbDps || 0, DPS_REW.length);
+      // 빠른 리셋 구간(rbLateMin ≥ 0, 사용자 영상 2026-10-12): 판매 강이 rbLateT 이상이고 우주 +N 전이면, 그 판에서 rbLateLv강 · DPS 보상 rbLateDps단계까지 받은 뒤 rbLateMin분 더 하고 리셋
+      const fast = P.rbLateMin >= 0 && T >= P.rbLateT && cryLv('c20') < P.tSwitchU;
+      const ok = (P.rbNeed25k !== 'on' || R.fiStage >= 2) && (!(P.rbLv > 0) || R.reached[Math.min(56, P.rbLv)]) && R.dpsIdx >= Math.min(P.rbDps || 0, DPS_REW.length)
+        && (!fast || ((!(P.rbLateLv > 0) || R.reached[Math.min(56, P.rbLateLv)]) && R.dpsIdx >= Math.min(P.rbLateDps || 0, DPS_REW.length)));
       if (ok && R.rbOkT == null) R.rbOkT = t;
       // 몰아 리방(rbBurst > 0): 보상만 받고 바로 나가는 짧은 판 rbBurst개 → 보상 뒤 rbLongMin분 하는 긴 판 1개를 되풀이 (예전 「보상만 먹고 2~3분 리방 수십~수백 번 → 몇 시간 잠수」)
-      const late = P.lateRoomMin > 0 && lateActive();   // lateRoomMin: 긴 판(보상 뒤 이만큼 더 함) — lateFrom부터
-      const extra = late ? P.lateRoomMin : P.rbBurst > 0 ? (rec.reboots % (P.rbBurst + 1) < P.rbBurst ? 0 : P.rbLongMin) : (P.rbExtraMin || 0);
+      const extra = fast ? P.rbLateMin : (P.rbEarlyEx > 0 && A.exLv < P.rbEarlyEx && !(P.epSpare === 'boxNormU' && cryLv('c2') >= 10 && cryLv('c3') >= 10)) ? (P.rbEarlyMin || 0) : P.rbBurst > 0 ? (rec.reboots % (P.rbBurst + 1) < P.rbBurst ? 0 : P.rbLongMin) : (P.rbExtraMin || 0);
       return (ok && t - R.rbOkT >= extra * 60) || age >= Math.max(P.rebootMaxMin, extra + 10) * 60;
     }
     if (P.reboot === 'fi5k') return R.fiStage >= 1;
@@ -2467,13 +2600,12 @@ function run(P0, seed, wantLog, init, ext){
     if (fuseActive() && P.fuseSell !== 'keep'){ if (!pushT){ pushT = true; if (rec.pushT === undefined) rec.pushT = t; L('융합: 52~55강을 안 팔고 전부 56강까지 → 융합'); } exNeedH = 0; nextTDecide = t + 300; return; }
     const p = probs(), ch = exChain(p, Math.max(1, attEMA)), xm = xMul(), crH = Math.max(crEMA, A.credits);   // 판 시작 직후엔 수입 평균이 0이라 보유 크레딧으로
     let best = null;
-    const cands = P.saleStage === 'auto' ? [52,53].concat(P.sell54 === 'off' ? [] : [54]).concat(P.sell55 === 'on' ? [55] : []) : [+P.saleStage];   // sell54 'off': 54강은 안 팔고 55·56강으로
+    const cands = [52,53,54].concat(P.sell55 === 'on' && cryLv('c20') >= (P.sell55U || 0) ? [55] : []).concat(P.sell56 === 'on' && !fuseActive() && cryLv('c20') >= (P.sell55U || 0) ? [56] : []);
     for (const s of cands){ const sales = Math.min(ch.N[s], crH / EX_SELL_CR); const v = (sales * EX_SALE[s].exp + ch.fTo[s]) * xm; if (!best || v > best.v) best = {s, v, units:ch.N[s]}; }
     if (best.s !== T){ L(`판매 강 ${T} → ${best.s}강`); T = best.s; exDirty = true; }
     // tSwitchU: 우주 +N이 될 때까지는 판매 강을 크레딧 되는 만큼 계속 팖(54강 판매 상자로 우주를 빨리), 그 뒤 tRule대로
     const tRuleNow = P.tSwitchU > 0 && cryLv('c20') < P.tSwitchU ? 'credit' : P.tRule;
     if (tRuleNow === 'credit' && pushT){ pushT = false; L(`판매 강 ${T}강 유닛 다시 판매 (우주 +${P.tSwitchU} 전)`); }
-    if (tRuleNow === 'push56'){ if (!pushT){ pushT = true; if (rec.pushT === undefined) rec.pushT = t; } }   // push56: 52~55강은 안 팔고 전부 56강까지 (56강만 판매)
     // 판매 강 유닛: 팔기(초월 EXP → 사슬 확률↑) vs 계속 강화(그 기의 첫 56강 확률 + 실패 EXP). 56강까지 남은 기대 「달성 몫」이 약 1이라 ln 증가와 확률을 같은 단위로 본다.
     if (tRuleNow === 'judge'){
       const c1 = exChain(p, 1), pe = perExpNow();
@@ -2501,9 +2633,7 @@ function run(P0, seed, wantLog, init, ext){
   const jStat = {n:0, fSum:0, last:null};
   // 45~48강 판매 전환 시점 (비교용, 설정 lowSellEnd): auto = 판단 · never·fNN = 뒤 단계에선 45~48강 안 팜
   //  · pNN = 첫 50강 뒤 NN분까지 45강을 크레딧 되는 대로 팜(앞 단계처럼), 그 뒤 안 팜 · all = 45강을 끝까지 계속 팜
-  function lowForce2(s){ const m = P.lowSellEnd || 'auto'; if (m === 'auto') return null;
-    if (m === 'all' || m[0] === 'p'){ if (s !== 45) return null; if (m === 'all') return 1; const f = rec.first50T; return f !== undefined && t < f + 60 * (+m.slice(1)) ? 1 : 0; }
-    return 0; }
+  function lowForce2(s){ return (P.lowSellEnd || 'auto') === 'auto' ? null : 0; }
   function gemPath(budget){
     const gems = Object.assign({}, A.gems), S = Object.assign(spec(), {gems});
     const score = () => lnN50(S) + Math.log(Math.max(1e-12, Math.min(100, 0.01 * A.exLv + 0.1 * (A.ex['5_1'] || 0) + 0.001 * (gems.patience || 0) + C.p50)));
@@ -2534,13 +2664,18 @@ function run(P0, seed, wantLog, init, ext){
   // 크레딧 배분: 순이득(V판매 − V강화)이 큰 강부터, 앞으로 saleHorizonH시간 동안 들어올 그 강 유닛 수만큼 크레딧을 배정
   //  → 높은 강이 그 시간 안에 크레딧을 다 쓸 만큼 나오면 낮은 강(45강)은 안 팔고 아껴 둠, 크레딧이 남으면 낮은 강도 바로 팜.
   // 많이 팔수록 무조·각보의 한계효율이 줄어서 3번 다시 계산. 결과 = 강별 판매 비율(다음 judgeEvery초 동안).
-  // 50강 판매 강제 (비교용): all 늘 · none 안 팜 · sleep 자는 동안만 · pre 우주 +tSwitchU 전 · post 그 뒤 · null = 판단 그대로
+  // 50강 판매 강제: sleep 자는 동안만 · pre 우주 +tSwitchU 전 · post 그 뒤 · awN 단수 N까지 · null = 판단 그대로
   // 50강 늘 판매는 광산 칸이 51강↑으로 다 찼을 때만 (2026-10-10: 우주가 높아 할인으로 판매가 사실상 공짜면 50강을 다 팔아 51강 도전이 0 → 새 판(융합 시작 리방)에서 51강이 영영 안 생겼음). 그 전엔 판단대로
   function force50(aw){ const f = force50raw(aw); return (f === 1 && R && mineSlotsNow() > 0 && mineCount() < mineSlotsNow()) ? null : f; }
-  function force50raw(aw){ switch (P.sell50Force){ case 'all': return 1; case 'none': return 0; case 'sleep': return aw ? null : 1; case 'pre': return cryLv('c20') < P.tSwitchU ? 1 : null; case 'post': return cryLv('c20') >= P.tSwitchU ? 1 : null; default: return String(P.sell50Force).slice(0, 2) === 'aw' && A.awaken < +String(P.sell50Force).slice(2) ? 1 : null; } }   // 'aw100000' = 단수 10만이 될 때까지 늘 판매
-  // sell49Force: 49강 판매 구간 (비교용) — judge = 판단대로 · all = 늘 · none = 안 팜 · awN = 단수 N까지 늘(그 뒤 판단) · awNx = 단수 N까지 늘(그 뒤 안 팜) · f50 = 첫 50강까지 늘(그 뒤 안 팜) · f51 = 첫 51강까지 늘(그 뒤 판단) · n50 = 첫 50강까지 안 팜(그 뒤 판단) · n50all = 첫 50강까지 안 팜(그 뒤 늘)
-  function force49(){ const m = String(P.sell49Force || 'judge'); if (m === 'judge') return null; if (m === 'all') return 1; if (m === 'none') return 0; if (m === 'f50') return rec.first50T === undefined ? 1 : 0; if (m === 'n50') return rec.first50T === undefined ? 0 : null; if (m === 'n50all') return rec.first50T === undefined ? 0 : 1; if (m === 'f51') return rec.firstT[51] === undefined ? 1 : null;
-    if (m.slice(0, 2) === 'aw'){ const x = m.slice(-1) === 'x', n = parseFloat(m.slice(2)); return A.awaken < n ? 1 : x ? 0 : null; } return null; }
+  // sleepAw(시험): 자리 비운 동안 단수 모드 — pre49 = 융합 전 49강 전부 판매 · pre = 융합 전 49강 전부 + 50강 판매 + 자판기 2 49강 4기 · all = 융합 중에도
+  function sleepAwMode(){ if (!asleepNow || !P.sleepAw || P.sleepAw === 'off') return 0; const pre = !fuseActive() && !A.condOn; return P.sleepAw === 'all' ? 2 : P.sleepAw === 'pre' ? (pre ? 2 : 0) : P.sleepAw === 'pre49' ? (pre ? 1 : 0) : 0; }
+  function force50raw(aw){ if (sleepAwMode() >= 2) return 1; if (fuseActive()) return 0;   // 융합 중엔 50강 안 팜 — 전부 51강 도전 → 56강 → 융합
+    if (P.sell50T > 0 && T >= P.sell50T) return 0;   // 판매 강이 54강↑이면 50강 안 팜 — 55·56강 판매로 바꾸면 크레딧이 남아 판단이 50강을 다 팔아(도전 가치를 초월 EXP로만 잼) 54강↑이 끊겼음 (2026-10-13)
+    switch (P.sell50Force){ case 'sleep': return aw ? null : 1; case 'pre': return cryLv('c20') < P.tSwitchU ? 1 : null; case 'post': return cryLv('c20') >= P.tSwitchU ? 1 : null; default: return String(P.sell50Force).slice(0, 2) === 'aw' && A.awaken < +String(P.sell50Force).slice(2) ? 1 : null; } }   // 'aw100000' = 단수 10만이 될 때까지 늘 판매
+  // sell49Force: 49강 판매 구간 — preU = 우주 +tSwitchU 전까지 sell49PreFrac만큼, 그 뒤 판단(기본) · awN = 단수 N까지 늘(그 뒤 판단) · f51 = 첫 51강까지 늘(그 뒤 판단)
+  function force49(){ if (sleepAwMode() >= 1) return 1; if (fuseActive()){ if (P.sell49FuseV > 0 && !(prod && prod.vend && prod.vend.a >= P.sell49FuseV && prod.vend.b >= P.sell49FuseV)) return 0; return Math.max(0, Math.min(1, P.sell49FuseFrac)); }   // sell49FuseV: 자판기 두 대가 N강을 살 때까지 융합 중 49강 안 팜(단수 멈춤)   // 융합 중엔 49강 안 팜(기본) — 크레딧이 넉넉하면 49강을 다 팔아 50·56강이 끊김 (2026-10-13)
+    const m = String(P.sell49Force || 'preU'); if (m === 'preU') return cryLv('c20') < P.tSwitchU ? Math.max(0, Math.min(1, P.sell49PreFrac)) : null; if (m === 'f51') return rec.firstT[51] === undefined ? 1 : null;
+    if (m.slice(0, 2) === 'aw') return A.awaken < parseFloat(m.slice(2)) ? 1 : null; return null; }
   function judge(){
     const W = P.judgeEvery, H = Math.max(W / 3600, P.saleHorizonH), M = g50M();
     const arr = {}; { let a = prod.in44; for (let s = 44; s <= 50; s++){ if (s > 44) a = a * prod.eff[s - 1] + (prod.feed[s] || 0); arr[s] = a; } }   // 시간당 도착 (판매 없을 때)
@@ -2577,27 +2712,31 @@ function run(P0, seed, wantLog, init, ext){
 
   // ---------- 진행 ----------
   if (init) runFromInit(); else newRun();
-  const maxT = P.maxHours * 3600, samples = [];
+  const maxT = (init ? 0 : Math.max(0, P.t0H || 0) * 3600) + P.maxHours * 3600, samples = [];   // 지정 스펙이면 시작 시각부터 maxHours
   let nextSample = t, exAt = {1:1, 10:1, 30:1, 100:1, 300:1, 1000:1, 3000:1};
   while (t < maxT && !done){
-    const age = t - R.t0, dt = age < 180 ? 10 : P.dt, awake = !(P.sleepH > 0) || ((t / 3600) % 24) < 24 - P.sleepH;
+    const age = t - R.t0, dt = age < 60 ? Math.min(10, Math.max(1, P.earlyDt || 10)) : age < 180 ? 10 : P.dt, awake = !(P.sleepH > 0) || ((t / 3600 + (P.sleepOffH || 0)) % 24) < 24 - P.sleepH;   // sleepOffH(시험): 자리 비우는 시각을 앞당김 (자리 비움 = 하루의 마지막 sleepH시간)
+    if (asleepNow === awake){ asleepNow = !awake; if (P.sleepAw && P.sleepAw !== 'off') prodDirty = true; }
     if (!R.ready && t >= R.readyT) runReady();
+    if (R.ready && R.fast && !R.fastB && age >= (R.fastA ? P.fastSecB : P.fastSecA)) fastRestore();
     if (cryDirty) refreshC();
     if (prodDirty ? t - lastProdT >= 30 || age < 200 : t - lastProdT >= P.prodEvery){ prod = prodCalc(spec()); prodDirty = false; lastProdT = t; awAtProd = A.awaken; }
     crInc = 0; exGainStep = 0;
     buyEP(dt);
+    { const st = mineStepOf(A.minePts); if (st > 0){ A.minePts = Math.max(0, A.minePts - st * (1000 / frameMsOf(A.level, A.exLv)) * dt); rec.mineStepH[st] = (rec.mineStepH[st] || 0) + dt / 3600; } }   // 광산 포인트: 매 프레임 단수만큼 늘 닳음 (광산에 유닛이 없어도, README)
     if (hotOn()) rec.hotH += dt / 3600; if (spOn()) rec.spH += dt / 3600; if (A.cp.mine2x > 0) rec.x2H += dt / 3600;
     if (R.ready){
       // 광산 크레딧 (51강 이상, 강별 배수 × 광산 단 — 곱연산, 0·1단은 ×1: 광산_포인트 표 · README) × 2배권 × 후원 3배
+      // 크레딧은 공속과 무관: 1타 크레딧 = (쿨타임 프레임 ÷ 24) × 배수라서 24프레임당 = 배수 × 기수 (계산기 mineCreditHitOf × MINE_HIT_RATE — 54·59강 2타 × 0.5, 52·55강 0.5타 × 2) · 58·59강 · 초월 8쪽-3(채취효율 +1%p/회)
       const step = mineStepOf(A.minePts), c2 = A.cp.mine2x > 0 ? 2 : 1;
-      let mc = 0; for (let s = 51; s <= 57; s++) if (R.hg[s]) mc += R.hg[s] * Math.pow(2, s - 51) * Math.max(1, step) * c2 * SUP.mineCr;
-      if (mc > 0) addCredits(mc * prod.sp * dt * Math.pow(1.1, A.orb.mine), 'mine');   // 채광의 보주 ×1.1/개
-      if (step > 0) A.minePts = Math.max(0, A.minePts - step * (1000 / prod.fms) * dt);
+      let mc = 0; for (let s = 51; s <= 59; s++) if (R.hg[s]) mc += R.hg[s] * Math.pow(2, s - 51) * Math.max(1, step) * c2 * SUP.mineCr;
+      if (mc > 0) addCredits(mc * prod.sp * dt * Math.pow(1.1, A.orb.mine) * (1 + 0.01 * (A.ex['8_3'] || 0)), 'mine');   // 채광의 보주 ×1.1/개
       // 엑스트라 보스 FI (판 시작 직후 40강을 사서 넣는다고 가정, 핫타임 중 넘기면 보상 2배)
-      if (R.fiStage < 2){
+      // 엑보 줄: 판마다 누적 타수 0부터, 그 판을 시작한 날에 열린 묶음까지 (fiDaily) — 5,000·25,000타는 예전과 같은 보상
+      if (R.fiLine < R.fiMaxIdx){
+        if (R.fiLv) R.fiRate = fiRateOf(R.fiLv);   // 보주·초월 공업이 바뀌면 타수도
         R.fiHits += fiRateNow() * prod.sp * dt;
-        if (R.fiStage === 0 && R.fiHits >= 5000){ R.fiStage = 1; R.k5T = t; const h = hotOn() ? 2 : 1; addCredits(5e4 * h * (P.fiCrX || 1), 'fi'); gainEP((500 * (P.fiBaseFin === 'off' ? 1 : SUP.epFin) + SUP.fi[0]) * h * (P.fiEpX || 1), '엑보 5,000타'); if (!rec.fi5kT) rec.fi5kT = t; }
-        if (R.fiStage === 1 && R.fiHits >= 25000){ R.fiStage = 2; R.k25T = t; const h = hotOn() ? 2 : 1; addCredits(2e5 * h * (P.fiCrX || 1), 'fi'); gainEP((2500 * (P.fiBaseFin === 'off' ? 1 : SUP.epFin) + SUP.fi[1]) * h * (P.fiEpX || 1), '엑보 25,000타'); if (!rec.fi25kT) rec.fi25kT = t; rec.fi25Sum += t - R.t0; rec.fi25N++; }
+        while (R.fiLine < R.fiMaxIdx && R.fiHits >= FI_LINES[R.fiLine].n) fiReward(R.fiLine++);
       }
       // 일반 경험치 (15~44강 실패) → 레벨업 → 스탯
       A.gexp += prod.fail * expMult() * dt / 3600;
@@ -2607,7 +2746,6 @@ function run(P0, seed, wantLog, init, ext){
       if (t >= nextTDecide && A.exLv >= 1) decideT();
       sellStock();
       if (P.sell50Rule === 'judge' && t >= nextJudge) judge();
-      const bank = P.saleEvery > 0 && P.bankCredits === 'on' && R.mode !== 'sale';   // 투트랙: 도전 판에선 크레딧을 모아 두고 판매 판에서 씀
       const c50 = LOW_SELL_CR * (1 - C.disc / 100);
       let x = poisson(prod.in44 * dt / 3600);
       for (let s = 44; s <= 50; s++){
@@ -2620,7 +2758,7 @@ function run(P0, seed, wantLog, init, ext){
           if (mm && mm.k === 'sellN' && mm.lv === s && x > 0){ const need = mm.n - ((rec.soldBy[s] || 0) - (A.missionMark || 0)), k = Math.min(x, need, Math.floor(A.credits / c50));
             if (k > 0){ sellGacha(s, k); x -= k; } } }
         x -= placeHunt(s, x);
-        if (x > 0 && s >= 45 && !bank){
+        if (x > 0 && s >= 45){
           const lf = s <= 48 ? lowForce2(s) : null;
           const f50 = s === 50 ? force50(awake) : null;   // sell50Force: 50강 판매 강제 (각보 → 단수 시험)
           const f49 = s === 49 ? force49() : null, frac = f50 !== null ? f50 : f49 !== null ? f49 : lf !== null ? lf : P.sell50Rule === 'judge' ? sf[s] : (s === 50 ? P.sell50Frac : 0);
@@ -2664,16 +2802,19 @@ function run(P0, seed, wantLog, init, ext){
       awaken();
       if (awake && t >= nextGem){ buyGems(); buyOrbs(); nextGem = t + P.gemEvery; }
       exEMA += (exGainStep * 3600 / dt - exEMA) * Math.min(1, dt / 3600);   // 초월 EXP 바탕값 시간당 (경험의 보주 값 계산용)
+      if (A.condOn && P.goal60 === 'on'){ const d = (A.n57dec || 0) - (A.n57prev || 0); A.n57prev = A.n57dec || 0; A.r57 = (A.r57 || 0) + (d * 3600 / dt - (A.r57 || 0)) * Math.min(1, dt / 3600);
+        const d9 = (A.n59push || 0) - (A.n59prev || 0); A.n59prev = A.n59push || 0; A.r59p = (A.r59p || 0) + (d9 * 3600 / dt - (A.r59p || 0)) * Math.min(1, dt / 3600); }   // 60강에 도전한 59강 시간당 (59강 판매 판단용)   // 광산 뒤 남는 57강 시간당 (판매 판단용)
       if (A.condOn){ const h = Math.floor((t - rec.condT0) / 3600); while (rec.cond.csH.length <= h) rec.cond.csH.push(rec.cond.cs); rec.cond.csH[h] = rec.cond.cs;
-        if (t >= rec.condT0 + P.condHours * 3600){ done = true; rec.cond.exEnd = A.exLv; rec.cond.awEnd = A.awaken; L(`응무조 단계 끝: ${P.condHours}시간 응무조 ${fmtN(rec.cond.cs)} (57강 판매 ${fmtN(rec.cond.sold[57] || 0)}기) · 보주 ${Object.entries(A.orb).filter(([, v]) => v > 0).map(([k, v]) => ORB_NAME[k] + ' ' + v).join(' · ')} · 초월 ${A.exLv.toLocaleString()} · 단수 ${fmtN(A.awaken)}`); } }
+      }
       if (awake && A.crs > 0) craft();
       for (let s = 52; s <= 55; s++) if (s === T) rec.Tsec[s] += dt;
     }
     crEMA += (crInc * 3600 / dt - crEMA) * Math.min(1, dt / 3600);
     for (const k in A.cp) A.cp[k] = Math.max(0, A.cp[k] - dt);
     flushAlloc(false);
-    if (t >= nextSample){ const p = probs(); samples.push([t, A.exLv, p[0], prod ? prod.n50 : 0, A.credits, A.crs, mineCount(), T, A.level, A.awaken, sf[50], C.disc, A.sh, low4150(), p.slice(), prod ? prod.money : 0, A.ep, slotsOf(A.exLv), (A.cry && cryLv('c20')) || 0]); nextSample = t + 3600; }   // 표본 14~: 51~56 확률 전부 · 돈/초 · EP · 슬롯 · 우주
+    if (t >= nextSample){ const p = probs(); samples.push([t, A.exLv, p[0], prod ? prod.n50 : 0, A.credits, A.crs, mineCount(), T, A.level, A.awaken, sf[50], C.disc, A.sh, low4150(), p.slice(), prod ? prod.money : 0, A.ep, slotsOf(A.exLv), (A.cry && cryLv('c20')) || 0, prod ? prod.n50eq : 0, prod && prod.vend ? prod.vend.a : 0, prod && prod.vend ? prod.vend.b : 0, A.condOn ? 1 : 0, R && R.hg ? R.hg[57] + R.hg[58] + R.hg[59] : 0, A.cs || 0, (A.cry && cryLv('c18')) || 0, (A.cry && cryLv('c19')) || 0]); nextSample = t + 3600; }   // 표본 14~: 51~56 확률 전부 · 돈/초 · EP · 슬롯 · 우주
     t += dt;
+    if (!done && !awake && P.sleepRoom === 'sale' && R.ready && !R.sleepSale && !fuseActive() && !A.condOn){ sleepSaleNext = true; doReboot(); sleepSaleNext = false; R.sleepSale = true; }   // 잠방: 자리를 비우기 시작하면 판매 할인 크리스탈(eqSleepOrder)로 새 판을 열고 깰 때까지
     if (!done && awake && shouldReboot()) doReboot();
   }
   flushAlloc(true);
@@ -2682,7 +2823,7 @@ function run(P0, seed, wantLog, init, ext){
   return Object.assign(rec, {exLv:A.exLv, level:A.level, awaken:A.awaken, credits:A.credits, ep:A.ep, crs:A.crs, sh:A.sh, gems:A.gems, ex:A.ex,
     cryLv:Object.fromEntries(CRY.map(c => [c.k, cryLv(c.k)])), eq:R.eq.slice(), p, T, st36:A.st['3_6'], n50:prod ? prod.n50 : 0, maxStage:Math.max(50, ...Object.keys(rec.firstT).map(Number)),
     st:Object.assign({}, A.st), orb:Object.assign({}, A.orb), cs:A.cs, judgeN:jStat.n, judgeAvgF:jStat.n ? jStat.fSum / jStat.n : null, disc:C.disc, race:Object.assign({}, A.race), bossHigh:A.bossHigh, mission:A.mission, endT:t,
-    log:wantLog ? log : null, samples:wantLog ? samples : null});
+    log:wantLog ? log : null, samples:wantLog || P.keepSamples ? samples : null});
 }
 
 // 기본 스펙 요약 (화면 위 상자) — 시작할 때의 생산·확률
@@ -2701,7 +2842,7 @@ function baseInfo(P0){
     awakenFor10T, awakenLvAfter10T, xMul:(1 + SUP.exAdd / 100) * SUP.exFin};
 }
 
-return {run, baseInfo, prodCalc, startStats, statCost, STAT_DEF, exProbs, exChain, cryAgg, g50Expect, normalize, DEFAULTS, CRY, CRY_BY, GEMC, GEM_NAME, EX_NAME, DPS_REW, F, NO_CRY, slotsOf, awDigits};
+return {run, baseInfo, prodCalc, startStats, statCost, STAT_DEF, exProbs, exChain, cryAgg, g50Expect, normalize, DEFAULTS, CRY, CRY_BY, GEMC, GEM_NAME, EX_NAME, DPS_REW, ORB_NAME, FI_LINES, F, NO_CRY, slotsOf, awDigits};
 })();
 // =====================================================================================
 // 통합 실행: 앞 단계(유닛 단위) → 넘겨주기 → 뒤 단계(흐름). 같은 난수열·같은 기록(log)을 이어 씀
@@ -2744,7 +2885,7 @@ function run(P0, seed, wantLog){
 }
 function baseInfo(P0){ return P2.baseInfo(Object.assign({}, DEFAULTS, P0 || {})); }
 self.Engine = {run, baseInfo, DEFAULTS, P1, P2, prodCalc:P2.prodCalc, startStats:P2.startStats, statCost:P2.statCost, STAT_DEF:P2.STAT_DEF, exProbs:P2.exProbs, exChain:P2.exChain, cryAgg:P2.cryAgg,
-  g50Expect:P2.g50Expect, normalize:P2.normalize, CRY:P2.CRY, CRY_BY:P2.CRY_BY, GEMC:P2.GEMC, GEM_NAME:P2.GEM_NAME, EX_NAME:P2.EX_NAME, DPS_REW:P2.DPS_REW, F:P2.F, NO_CRY:P2.NO_CRY, slotsOf:P2.slotsOf, awDigits:P2.awDigits};
+  g50Expect:P2.g50Expect, normalize:P2.normalize, CRY:P2.CRY, CRY_BY:P2.CRY_BY, GEMC:P2.GEMC, GEM_NAME:P2.GEM_NAME, EX_NAME:P2.EX_NAME, DPS_REW:P2.DPS_REW, ORB_NAME:P2.ORB_NAME, FI_LINES:P2.FI_LINES, F:P2.F, NO_CRY:P2.NO_CRY, slotsOf:P2.slotsOf, awDigits:P2.awDigits};
 </script>
 
 <script>
@@ -2757,39 +2898,44 @@ const CRY_KEYS_HELP = E.CRY.map(c => `${c.k} ${c.name}`).join(' · ');
 
 const FIELDS = [
   {g:'실행 · 목표', open:true, items:[
-    ['startMode','시작','select','레벨 1부터: 앞 단계(유닛 단위)로 첫 50강까지 간 뒤 이어서. 지정 스펙: 아래 「지정 스펙」 값에서 바로 뒤 단계로(예전 50~56강 시뮬)',[['fresh','레벨 1부터 (통합)'],['spec','지정 스펙에서 시작']]],
-    ['goal','목표 강','select','이 강을 서로 다른 판에서 처음 뽑는 것을 셈',[['56','56강'],['55','55강'],['54','54강'],['53','53강'],['52','52강'],['51','51강']]],
-    ['goalCry','목표: 우주 크리스탈 +N','int','N이면 우주 +N이 되면 끝 (+10 = 우주 149개). 0이면 목표 강을 처음 뽑을 때 끝'],
-    ['vendHi','자판기 49강 묶음·51~54강 구매 (뒤 단계)','select','돈 수입이 「가격 × 초당 구매 수」를 대면 49강 2·4·12기 묶음, 51~54강(53강 2기·54강 2~24기 묶음 포함)까지 삼 (계산기 가격표). 54강×24 배율은 미확인이라 뺌',[['on','삼 (기본)'],['off','46강까지만 (예전)']]],
+    ['startMode','시작','select','레벨 1부터: 앞 단계(유닛 단위)로 첫 50강까지 간 뒤 이어서. 지정 스펙: 아래 「지금 내 상태에서 시작」에 적은 상태로 새 판을 여는 것부터(뒤 단계 엔진)',[['fresh','레벨 1부터 (통합)'],['spec','지정 스펙에서 시작']]],
+    ['fiMultiN','첫 판 인원 (멀티)','int','같이 하는 사람 수(비슷한 진행이라고 가정). 2명 이상이면 엑보 타수 N배 + 멀티 보너스(뽑기 +1 · 51~58강 +0.5%p · 융합 +0.5%p · 57~59강 공업 +3)'],
+    ['fiMultiRooms','멀티로 하는 판 수','int','처음 몇 판을 위 인원으로 (1 = 첫 판만, 리방하면 그 뒤 인원)'],
+    ['fiMultiN2','그 뒤 판 인원','int','1 = 혼자 (멀티 보너스 없음)'],
+    ['multiBonus','멀티 보너스','select','사용자 2026-10-12: 혼자면 멀티 보너스를 못 받음',[['auto','인원이 2명 이상인 판만 (기본)'],['on','늘 받음 (예전 가정)'],['off','안 받음']]],
     ['discAdd','판매 할인 %p 공짜로 더하기 (비교용)','num','45~50강 판매 할인을 크리스탈 없이 이만큼 더해 봄. 100 = 판매 무료(뽑기 크레딧 당첨도 0)'],
     ['exResetRoom','판 시작마다 초월 스탯 다시 찍기','select','초월 스탯 초기화는 판 시작(유닛 뽑기 전 10분 안)에만 됨',[['off','안 함'],['on','함']]],
-    ['fuseGoal','목표: 한 판에 57강 N기 (융합, 비교용)','int','0 = 안 씀. 1 = 첫 57강, 48 = 57강 48기. 쓰면 우주 목표 대신 이걸로 끝. 56강 2만 기 = 융합 1회(3.5% + 7쪽-3), 실패·리방하면 진행도 사라짐'],
-    ['fuseFrom','융합 시작 시점','text','now(뒤 단계 처음부터) · u10(우주 +10 뒤) · h30(30시간 뒤) · x500(초월 500 뒤) · r20000(56강 생산 능력 시간당 2만 기 이상)'],
-    ['fuseRoom','융합 중 리방','select','',[['attempt','융합 1번 하고 진행도가 비면 리방'],['never','융합 시작 뒤 리방 안 함'],['untilFirst','융합 1번마다 리방, 57강이 나온 판은 그대로 계속'],['normal','원래 리방 규칙 (진행도 버림)']]],
+    ['fuseFrom','융합 시작 시점','text','기본 x2500(초월 2,500 — 자판기 2가 51강을 사는 지금 흐름, 초월 1,346 · 우주 +14 · 흑백 18 · 단수 1.52억 시작 24판 60강 기대 0.693 시각: 2,300 107.2h · 2,500 106.5 · 2,700 105.7 · 3,000 107.2, 처음부터 2,500 124.3 · 3,000 129.9(융합 중 49강 40%일 때) — 51강을 사면 초월이 빨리 올라 예전 최적 2,000보다 뒤로). now(뒤 단계 처음부터) · u10(우주 +10 뒤) · h30(30시간 뒤) · x500(초월 500 뒤) · r20000(56강 생산 능력 시간당 2만 기 이상)'],
     ['fuseSell','융합 중 52~55강 판매','select','',[['push','안 팜 (전부 56강으로)'],['keep','원래 판매 규칙 (남는 56강만 융합)']]],
-    ['fuseExReset','융합 시작 때 초월 스탯 다시 찍기','select','초월 스탯 초기화가 된다고 볼 때',[['off','안 함'],['on','함']]],
-    ['condHours','57강 N기 뒤 응무조 단계 (시간)','num','0 = 안 함. N이면 57강 목표를 채운 그 판에서 N시간 더: 남는 57강을 팔아(또는 58강↑ 도전) 응축된 무색 조각 → 보주. 결과 rec.cond (시간마다 응무조 csH)'],
-    ['condPush','응무조 단계: 57강을 위로','select','',[['auto','57강 1기 값이 큰 쪽 (판매 4 vs 58강 확률 × 58강 값)'],['off','늘 판매']]],
-    ['orbMode','응무조 단계: 보주','select','',[['auto','삼 (아래 순서, 빈칸이면 효율)'],['off','안 삼']]],
-    ['orbOrder','보주 순서 (키:개수)','text','빈칸 = 효율(시간당 응무조 증가 ÷ 비용). low 하급(54강) · mid 중급(55강) · high 상급(융합) · save 절약 · sp 특급(57강) · pr 고급(58강) · exp 경험 · power 힘 · mine 채광 · eon 영겁 · fate 명운'],
     ['orbExpH','경험의 보주 값: 초월 EXP 몇 시간치','num','효율 모드에서 경험의 보주 1개 = 늘어나는 초월 EXP × 이 시간 × EXP 1당 값'],
-    ['condStat','응무조 단계: 먼저 찍을 초월 스탯 (키:Lv)','text','빈칸 = 효율. 예: 7_6:200 (응무조 획득량) · 7_4:100 (57강) · 7_3:100 (융합)'],
-    ['lateRoomMin','긴 판 길이 (분)','num','0 = 안 씀(보상 기준 그대로). 긴 판이 시작되면 보상 받고 이만큼 더 함 (99999 = 리방 안 함)'],
-    ['lateFrom','긴 판 시작 (우주 목표)','select','이때부터 긴 판',[['start','뒤 단계 처음부터'],['f54','첫 54강 뒤'],['f55','첫 55강 뒤'],['f56','첫 56강 뒤'],['x30','초월 30부터'],['x100','초월 100부터']]],
+    ['goal60','목표: 첫 60강','select','켬: 융합으로 57강 → 광산(58·59강도) → 남는 것은 팔거나 위로 → 첫 60강에서 끝. 끄면 우주 크리스탈 +10에서 끝(비교용)',[['on','켬 (첫 60강)'],['off','끔 (우주 +10, 비교용)']]],
+    ['goal60End','60강 목표: 끝내는 때','select','59→60강이 0.005%라 실제 첫 60강은 운이 큼. e1 = 59강 도전마다 60강 확률을 더한 기대값이 1기가 되면 끝(운을 뺀 전략 비교용, 기대값 0.693기 = 첫 60강 시각의 중앙값)',[['first','실제 첫 60강'],['e1','기대값 1기 (비교용)']]],
+    ['mine58','60강 단계: 광산에 둘 58강 (최대)','int','0~48. 넘는 58강은 팔거나 59강으로'],
+    ['mine59','60강 단계: 광산에 둘 59강 (최대)','int','0~48. 넘는 59강은 팔거나 60강 도전'],
+    ['sellH','60강 단계 판매 판단: 몇 시간을 보고','num','기본 20. 클수록 오래 팔아 보주를 먼저 삼. 지금 흐름(51강 구매 · 융합 2,500 · 융합 중 49강 60%) 초월 1,346 시작 24판: 15 106.5h · 20 103.9 · 30 104.1 · 50 106.9 · 80 116.3, 처음부터 15 124.3 · 30 122.3 · 50 125.1. 그 전 비교 — 초월 851 · 단수 1.25억 시작 24판(60강 기대값 0.693 시각 = 첫 60강 중앙값, 운 뺌): 5 175h · 10 158h · 20 155h · 50 185h · 200 60강 못 감(57강을 계속 팖) · 57~59강 안 팜 60강 못 감 · 보주 1쪽까지 57강만 팜 못 감'],
+    ['sell59H','59강 판매 판단: 몇 시간을 보고','num','기본 40 (−1이면 위 칸과 같음, 0이면 59강 안 팜). 59강을 팔면 응축된 무색 조각(보주) + 퀘이사 상자(마리당 약 0.055개 — 60강 판 리셋 때 길운·집중·절제·증식으로 낌). 초월 1,563 상태 24판 60강 기대(24시간 리셋 · 길운·집중·절제·증식): 20 79.5h · 30 75.9 · 40 75.4 · 50 77.5 · 60 80.6 · 80 83.4. 판단은 실제로 60강에 도전하는 59강 시간당으로 잼(예전엔 59강 전체 생산이라 거의 다 팔아도 판매를 크게 잡아 폭주)'],
+    ['room60','60강 단계 리방','select','리방하면 57강↑이 다 사라지지만 모은 퀘이사 크리스탈(길운·집중·절제·증식)을 새 판에 낄 수 있음(크리스탈은 판 시작 때만 바꿈) + 엑보 줄·첫 달성 크레딧을 다시 받음. qN = 판을 연 지 N시간이 지났고 그 뒤 퀘이사 4종 단계 합이 room60Q(기본 4) 이상 늘었을 때만 리셋(59강이 나오기 전 쓸모없는 리셋을 안 함). 2026-10-13 초월 1,816 · 우주 +15 · 흑백 20 · 단수 2.16억 상태 24판 60강 기대: q6 69.5h · q12 70.2 · q24 71.2 · q12(+8) 71.8 · 24시간마다 74.0 · 안 함 99.2, 처음부터 q6 91.6 · 24시간마다 94.2h',[['q6','퀘이사 +4 늘면 (6시간 뒤, 기본)'],['q12','퀘이사 +4 늘면 (12시간 뒤)'],['h24','24시간마다'],['never','안 함 (퀘이사를 못 낌)']]],
+    ['mineFill','광산 채우기 (54강 판매 중)','select','판마다 광산이 이 강 이상 48기가 될 때까지 54(·55)강을 안 팔고 위로, 그 뒤 54강 판매. 기본 56 · 우주 +10부터 — 2인·T.027 48판(첫 60강 / 우주 +13): 안 함 255h / 14.2h · 55강 우주 +10부터 248h / 12.3h · 56강 우주 +10부터 249h / 11.7h · 56강 초월 1,000부터 250h / 14.2h · 판을 8분으로 늘리면 269~273h / 21~22h(손해)',[['56','56강까지'],['55','55강까지']]],
+    ['mineFillU','광산 채우기: 우주 +N부터','int','기본 10'],
+    ['mineFillEx','광산 채우기: 초월 레벨 N부터','int','기본 0'],
+    ['sell49FuseFrac','융합 중 49강 판매 비율','num','0~1, 기본 0.6 (지금 흐름 초월 1,346 시작 24판: 20% 123.1h · 40% 111.9 · 50% 108.2 · 60% 106.5 · 70% 111.1 · 80% 117.0 · 100% 158 — 자판기 2가 51강을 사서 49강이 적게 들어오니 예전 40%보다 많이 팖. 그 전 비교 sellH 10, 60강 기대 0.693 시각: 0% 179h · 20% 164h · 40% 150h · 80% 158h · 100% 57강 안 나옴 · 자판기 51/51까지 멈춤 뒤 80% 150h)'],
+    ['sell49FuseV','융합 중 자판기 두 대가 N강을 살 때까지 49강 안 팜','int','0 = 안 씀. 51이면 자판기 51/51 전까지 단수 멈춤 (지금 흐름 60%에서 109.4h vs 106.5h로 약간 손해, 예전엔 40%와 같았음)'],
+    ['sell49PreFrac','54강 판매 구간 49강 판매 비율','num','0~1, 기본 0.8(새 후반 빌드와 함께 60강 기대 0.693 시각: 지금 상태 0.4 154h · 0.6 150h · 0.8 146h, 처음부터 0.6 166h · 0.8 159h. 그 전 비교 — 초월 813 · 우주 +12 · 흑백 16 · 단수 1.25억 시작 24판, 우주 +14부터 55·56강 판매와 함께: 0.4 191/195h · 0.6 184/193h · 0.8 187/186h — 첫 60강은 같고 0.6이 초월 69h 3,201 · 우주 +17 43h로 0.8(2,499 · 123h)보다 앞섬, 단수는 6.3억 vs 7.1억) — 「49강 판매 구간」이 우주 +N 전까지 늘일 때 49강을 이 비율만 팖. 1(전부)이면 크레딧이 넉넉해지는 우주 +14쯤부터 50강이 안 나와 54강 판매·초월이 멈춤. 2인·T.027 48판 첫 60강 중앙 약 237 → 205h, 우주 +15 190 → 28h (초월 353 · 단수 1.2억 시작 24판: 0.6 207h · 0.8 199h · 0.95 207h · 전부 238h · 판단대로 245h)'],
+    ['fiDaily','엑보 줄 하루 해금','select','정식 출시 첫날은 25,000타까지, 둘째 날부터 만 → 억 → 조 → 경 → 해 → 자 묶음을 하루에 하나씩(판을 시작한 날 기준, 매일 18시, 7일째에 자 묶음까지 다 열림). 끄면 공개 테스트처럼 25,000타에서 멈춤',[['on','켬 (정식)'],['off','끔 (25,000타까지)']]],
+    ['fiDay0H','엑보 해금: 출시 몇 시간 뒤 레벨 1로 시작','num','0 = 출시(18시) 바로 시작'],
+    ['fiSwapAll','25,000타 뒤에도 엑보 유닛 바꿈','select','',[['on','켬 (더 높은 강이 나오면 늘 바뀜)'],['off','끔 (25,000타까지만)']]],
+    ['ex8','초월 8쪽 1·2칸 (자판기 촉진 +1,000)','select','시간당 50강 효율대로 찍음 (1회 50,000P). 8쪽-3(광산 채취효율)은 condStat으로',[['on','켬'],['off','끔']]],
     ['runs','판 수 (시뮬 횟수)','int','같은 설정으로 몇 번 돌릴지 (시드마다 운이 다름)'],
     ['seed0','시작 시드','int',''],
     ['maxHours','최대 시간 (현실 시간)','num','이 시간까지 목표가 안 나오면 미완료'],
     ['dt','뒤 단계 계산 간격 (초)','num','판 시작 3분은 항상 10초']]},
   {g:'앞 단계 (레벨 1 → 첫 50강 · 유닛 단위)', open:true, items:[
     ['handoffBoost','흐름 엔진으로 넘길 촉진','int','두 자판기 촉진이 다 이 값을 넘으면 넘김 (첫 50강이 먼저 나오면 그때 넘김)'],
-    ['gemFirst1','앞 단계 먼저 살 보석 (키:개수, 순서대로)','text','기본 hostile:30, accel:5, wealth:20, exp:1000, ultimate:100 — 1시간 미션 무조로 적대 30·촉진 5·재물 20을 경험 1,000보다 먼저, 그다음 궁극 100 (T.020 96판 2026-10-10: 예전 적대 20·촉진 3·재물 10·경험 1,000보다 첫 50강 −1.9분 · 전체 −0.04h. 경험 먼저 +2.7분, 재물 빼면 +1.6분, 경험 500 +2.7분). mastery 숙련 · achieve 성취'],
-    ['gemFirstMode1','먼저 살 보석이 비쌀 때','select','',[['reserve','그 값만큼 남겨 두고 모음'],['free','살 수 있을 때만 (생산 보석 안 막음)']]],
-    ['gemSched1','앞 단계: 정해 둔 때 한 번에 살 보석 (때:키:개수)','text','예: m35:low:100, f46:mid:100, m37:high:100 — mNN = NN번 미션이 지금 미션이 되면 · fNN = 처음 NN강 · hNN = 사냥터 48칸이 전부 NN강 이상 · now = 바로. 목표 개수까지 한 번에 살 무조가 모이면 삼 (빈칸 = 안 씀). 기본 m35:low:100, f46:mid:100, m37:high:100 = 1시간 미션 때 하급 100 · 첫 46강 때 중급 100 · 46강 판매 미션 때 상급 100 (사용자 안)'],
-    ['gemAuto1','앞 단계: 생산 보석 효율대로 사는 때','select','44강부터 남는 무조로 44~48강 확률·궁극·재물·촉진 등을 효율 순으로',[['mission','무조 주는 미션을 깰 때만 한 번에 (기본, 넘길 때 한 번 더)'],['on','무조가 생길 때마다'],['after','정해 둔 보석을 다 산 뒤부터'],['off','안 삼 (넘긴 뒤 뒤 단계에서)']]],
-    ['p1Mine','41~50강·고유유닛: 개인보스 10 뒤 허수광산','select','켬: 41~50강·고유유닛마다 허수광산 돈이 허수아비 돈보다 크면 광산을 침(돈 위주, 무조는 미션으로). 끔: 계속 허수아비(무조 위주, 앞·뒤 단계 둘 다) — 비교용. 51강↑은 늘 광산',[['on','켬 (돈 위주, 기본)'],['off','끔 (허수아비 무조 위주)']]],
-    ['m35When','45강 판매 미션 (35번) 하는 때','select','',[['now','미션이 오면 처음 나온 45강을 바로 (기본)'],['h44','사냥터를 44강으로 다 채운 뒤'],['h45','사냥터를 45강으로 다 채운 뒤']]],
+    ['gemFirst1','앞 단계 먼저 살 보석 (키:개수, 순서대로)','text','기본 hostile:30, wealth:20, exp:1000, ultimate:100 — 1시간 미션 무조로 적대 30·재물 20을 경험 1,000보다 먼저, 그다음 궁극 100. 촉진의 보석은 T.027에서 첫 1개가 1경이라 뺌(넣으면 그 자리에서 막혀 뒤 보석을 못 삼 — 2026-10-12) (T.020 96판 2026-10-10: 예전 적대 20·촉진 3·재물 10·경험 1,000보다 첫 50강 −1.9분 · 전체 −0.04h. 경험 먼저 +2.7분, 재물 빼면 +1.6분, 경험 500 +2.7분). mastery 숙련 · achieve 성취'],
+    ['gemSched1','앞 단계: 정해 둔 때 한 번에 살 보석 (때:키:개수)','text','예: m35:low:100, f46:mid:100, m37:high:100 — mNN = NN번 미션이 지금 미션이 되면 · fNN = 처음 NN강 · hNN = 사냥터 48칸이 전부 NN강 이상 · now = 바로. 목표 개수까지 한 번에 살 무조가 모이면 삼 (빈칸 = 안 씀). 기본 빈칸 = 미션 무조를 받을 때마다 효율대로 나눠 삼. 하급·중급·상급을 정해 둔 때 100개씩(m35:low:100, f46:mid:100, m37:high:100)은 2인 48판에서 우주 +10 +0.10h · 첫 50강 +0.7분, 상급만 빼면 +0.03h'],
+    ['gemAuto1','앞 단계: 생산 보석 효율대로 사는 때','select','44강부터 남는 무조로 44~48강 확률·궁극·재물·촉진 등을 효율 순으로',[['mission','무조 주는 미션을 깰 때만 한 번에 (기본, 넘길 때 한 번 더)'],['on','무조가 생길 때마다'],['after','정해 둔 보석을 다 산 뒤부터']]],
+    ['m35When','45강 판매 미션 (35번) 하는 때','select','',[['now','미션이 오면 처음 나온 45강을 바로 (기본)'],['h44','사냥터를 44강으로 다 채운 뒤']]],
     ['statMode1','레벨업 스탯 (앞 단계)','select','효율표: 1포인트당 목표 강 시간당 생산량이 가장 많이 느는 스탯부터',[['auto','효율표'],['order','순서대로']]],
-    ['internalFrom','내부계산 켜는 때','select','내부계산 = 강화·판매에 유닛 이동 시간 없음 (자판기 기능)',[['start','처음부터 (기본, 사용자 2026-10-10)'],['36','3P-6을 찍어 촉진 11/11이 되면 (예전 가정)']]],
     ['rush45','1시간 미션 뒤 44·45강 먼저','select','켬: 40강 48기 미션(23번)을 깨면 45강 판매 미션(35번)까지 사냥터는 그대로 두고 새로 나오는 40강↑은 전부 위로 (44강 만들기 무조 → 하급 100 → 첫 45강 판매 무조 → 그 뒤 사냥터). 사용자 운영 = 이것 + 보유 미션 regather(1시간 전엔 40강을 안 쥐고 41~42강까지)',[['off','끔 (기본)'],['on','켬']]],
     ['rush36Level','3P-6 먼저 찍기 (이 레벨부터 모음)','int','0 = 효율표대로'],
     ['cap41','4-1(허수아비 무조) 상한 (앞 단계)','int','-1 = 제한 없음. 비교(96판, 2026-10-06): 상한 2·4·10·25 모두 0.1~0.2h 빠름(제한 없으면 2.5~3h에 포인트 절반을 4-1에 씀), 0은 효과 없음 — 처음 몇 레벨만 값어치가 큼'],
@@ -2803,23 +2949,19 @@ const FIELDS = [
     ['rerollAfter25k','엑보 25,000타 받고 리방할 횟수','int','앞 단계에서 처음 N판'],
     ['fiPick','엑보에 36강 사서 넣기','select','판 시작 때 돈을 금방 모을 수 있으면 36강을 바로 삼 (엑보 목표가 36강 이하일 때만)',[['36','삼'],['off','안 삼']]],
     ['fiUp','엑보 유닛 자동 교체','select','켬: 26강이 나오면 바로 때리고, 더 높은 단계(36 → 40 → 48 → 49 → 50 → 51강↑)가 나오면 그 유닛으로 바뀜. 끔: 한 번 넣으면 그 판 동안 그대로',[['off','끔 (목표 단계까지 기다렸다 넣고 고정)'],['on','켬 (26강부터 바로, 높은 단계로 바뀜)'],['f26','26강 고정 (26강이 나오면 바로, 안 바뀜)']]],
-    ['fillHighFrom','LV.MAX 사냥터 채우기 (이 강부터)','select','40강 풀 다음 이 강부터 사냥터에 넣음. 기본 41 — T.018(둘레 유닛 수만큼 무조)에선 41~43강도 사냥터에 두는 게 빠름',[['41','41강부터'],['42','42강부터'],['43','43강부터'],['44','44강부터'],['45','45강부터'],['46','46강부터'],['0','안 함']]],
-    ['highOver40','41강↑을 40강 자리에 먼저 (돈이 줄어도)','select','돈으로만 보면 41강(LV.MAX)이 40강(LV.2 사냥터, 허수아비 돈 구간 배수)보다 적게 벌어서 41강은 안 넣고 42강부터 넣음. 켜면 사냥터에 40강 이하가 남아 있는 동안 41강↑을 먼저 넣고 빠진 40강은 다시 강화(40강 풀 → 41강 풀 → … 차근차근). 기본 켬 — 96판 첫 50강 −6.8분(±0.25), 첫 56강·전체는 같음',[['off','끔 (돈 기준, 41강 건너뜀)'],['on','켬']]],
     ['fillHighTo','LV.MAX 사냥터 채우기 (이 강까지)','select','',[['48','48강까지'],['49','49강까지'],['47','47강까지']]],
     ['climbRule','40~48강 사냥터에 넣을지 · 더 올릴지 (앞 단계)','select','고정: 40강은 사냥터 하위 칸보다 좋으면 바로 넣고 44~48강은 나오는 대로 넣음(위 두 설정). 파방·확률 판단: 지금 넣는 이득과 「성공 확률(파방 재시도 포함) × 올라간 강의 이득」을 비교해 40~48강을 골라 넣음 — 파방이 높고 확률이 좋으면 40→44, 45→48까지 그냥 올림. 이 설정이 켜지면 위 「이 강부터」는 무시(40강부터), 「이 강까지」가 목적지',[['fixed','고정 규칙 (지금까지)'],['auto','파방·확률 판단']]],
     ['climbBias','파방·확률 판단 가중치','num','올리는 쪽 기대 이득에 곱함 (기본 1, 1보다 크면 더 올리고 작으면 일찍 넣음)'],
     ['sellMode','45~49강 판매 (앞 단계)','select','효율: 판 무조로 산 보석이 늘리는 50강 생산 몫이 그 유닛이 50강까지 갈 확률보다 크면 팜',[['value','효율'],['off','안 팜']]],
-    ['lowSellEnd','45~48강 판매 끝 (무조 → 각보 전환)','select','45강 판매(무조로 44~48강 확률 보석)를 언제 멈추고 크레딧을 49·50강 판매(무조 200~8000배·각보)에 남길지. 비교(96판, 2026-10-06): 처음 47~49강에서 멈춤이 가장 빠름(판단만보다 약 0.2h), 안 팜 +0.5h, 첫 50강 뒤에도 45강 계속 팔면 30분 +0.1h · 1시간 +0.6h · 끝까지 +6.7h',[['never','안 팜 (기본, T.020 — 미션 45강 1기·46강 12기만)'],['f48','처음 48강이 나오면 (T.019 기본)'],['f47','처음 47강이 나오면'],['f49','처음 49강이 나오면'],['f50','처음 50강이 나오면'],['auto','판단만 (넘길 때까지 크레딧 되는 대로)'],['p30','첫 50강 뒤 30분까지 45강 계속'],['p60','첫 50강 뒤 1시간까지 45강 계속'],['p120','첫 50강 뒤 2시간까지 45강 계속'],['all','45강 끝까지 계속']]],
+    ['lowSellEnd','45~48강 판매 끝 (무조 → 각보 전환)','select','45강 판매(무조로 44~48강 확률 보석)를 언제 멈추고 크레딧을 49·50강 판매(무조 200~8000배·각보)에 남길지. 비교(96판, 2026-10-06): 처음 47~49강에서 멈춤이 가장 빠름(판단만보다 약 0.2h), 안 팜 +0.5h, 첫 50강 뒤에도 45강 계속 팔면 30분 +0.1h · 1시간 +0.6h · 끝까지 +6.7h',[['never','안 팜 (기본, T.020 — 미션 45강 1기·46강 12기만)'],['f47','처음 47강이 나오면'],['f49','처음 49강이 나오면'],['f50','처음 50강이 나오면'],['auto','판단만 (넘길 때까지 크레딧 되는 대로)']]],
     ['lowSellReserve','45~48강 판매 때 남길 크레딧 (앞 단계)','num','49·50강 판매용으로 이만큼 남기고 45~48강을 팜 (기본 0, 100만이면 판단만보다 0.13h 빠름)'],
     ['lowSellBias','45~48강 판매 효과 가중치','num','판매 판단에서 45~48강 판매 효과 × 이 값 (기본 1, 0.3이면 0.14h 빠름, 3 이상이면 46~48강까지 팔아 49강이 거의 안 나옴)'],
     ['specialHot','특별 핫타임 (앞 단계)','select','',[['on','씀'],['off','안 씀']]],
     ['spHotWhen','특별 핫타임 사는 때 (앞 단계)','select','특별 핫타임 = 경험치 +50 · 뽑기 +3',[['sell','45~50강을 팔 때만'],['first','첫 ExPoint(엑보 5,000타)로 먼저 1시간'],['always','꺼져 있으면 크레딧보다 먼저'],['afterUp','승급을 다 찍은 뒤부터 꺼져 있으면 먼저'],['after25k','엑보 25,000타 뒤부터 꺼져 있으면 먼저'],['first25k','첫 5,000타로 1시간 + 25,000타 뒤부터 꺼져 있으면 먼저']]],
     ['hotAlways','핫타임 계속 (앞 단계)','select','켬: 첫 ExPoint부터 핫타임이 꺼지지 않게 크레딧보다 먼저 삼',[['off','남는 ExPoint로'],['on','계속 켬']]],
     ['specStart','특수확률 쿠폰 시작 (앞 단계)','select','',[['40','그 판에서 40강이 나오면'],['fill40','사냥터를 40강 이상으로 채우고 40강을 강화할 때부터']]],
-    ['fill40','40강으로 사냥터 채우기 (앞 단계)','select','끄면 40강 풀을 건너뜀: 40강은 사냥터에 안 넣고 나오자마자 강화, 사냥터는 39강 → 41강으로 바로. 「40강 48기 보유」 미션이 막혀 뒤 미션도 밀림',[['on','켬 (40강 풀 → 41강)'],['off','끔 (40강 풀 건너뜀)']]],
     ['lv2StopDps','2판부터: LV.2 사냥터 DPS가 이만큼 되면 사냥터 그만 올리기','num','0 = 안 함. 예: 5000000 — 그 판에선 26~40강을 사냥터에 더 안 넣고 전부 41강으로 올림 (LV.MAX 무조를 빨리, 사용자 안)'],
-    ['missionFix','보유 미션(40강·46강 48기) 처리','select','h40: 40강 48기를 1시간 미션까지 쥐고 깸(기본, 안 쥐면 첫 50강 +28분) · 46강 48기는 사냥터를 채우며 저절로 깨져서 쥘 필요 없음',[['h40','40강만 쥠 (기본)'],['regather','1시간 때 40강을 다시 48기 모음 (미리 안 쥠)'],['on','40강·46강 둘 다 쥠'],['later','안 쥠 (뒤 단계에서 깸)'],['off','예전 (뒤 단계 판매 미션도 막힘)']]],
-    ['m40Later','40강 48기 보유 미션 (40강 풀을 건너뛰었을 때)','select','다음 판 = 뒤 단계 첫 리방 뒤 새 판에서 40강을 잠깐 48기 들고 깸(아래 초 뒤)',[['nextRoom','다음 판에서 깸'],['never','안 깸 (뒤 미션 전부 막힘)']]],
+    ['missionFix','보유 미션(40강·46강 48기) 처리','select','h40: 40강 48기를 1시간 미션까지 쥐고 깸(기본, 안 쥐면 첫 50강 +28분) · 46강 48기는 사냥터를 채우며 저절로 깨져서 쥘 필요 없음',[['h40','40강만 쥠 (기본)'],['regather','1시간 때 40강을 다시 48기 모음 (미리 안 쥠)'],['on','40강·46강 둘 다 쥠']]],
     ['m40Sec','40강 48기 보유: 새 판 시작 뒤 몇 초에 깸','int',''],
     ['autoHunt','자동사냥으로 입구 유닛 바로 넣기 (앞 단계)','select','켬: 사냥터 입구 유닛은 손 시간 없이 들어감',[['on','켬'],['off','끔 (넣기 1초)']]],
     ['swapBatch','사냥터 교체 한 번에 최대 (기)','int','1 = 한 기씩(예전). N이면 들어갈 유닛 수만큼 한 번에 빼기(아래 초 1번)'],
@@ -2836,19 +2978,19 @@ const FIELDS = [
     ['sell50Rule','45~50강 판매 규칙','select','판단: 강마다 판매 1기 효과(무조·각보)와 강화 효과(위 단계 가치 × 성공 확률, 50강은 51강 도전 효과)를 비교하고, 순이득이 큰 강부터 크레딧을 배정. 크레딧 남는 만큼(예전): 50강만 판매',[['judge','판단 (45~50강)'],['credit','크레딧 남는 만큼 50강만 (예전)']]],
     ['saleHorizonH','크레딧 배정 시간 (시간)','num','앞으로 이 시간 동안 들어올 높은 강 유닛에 크레딧을 먼저 배정 — 길면 크레딧을 아껴 높은 강을 팔고, 짧으면 낮은 강도 바로 팜'],
     ['judgeBias','50강 판단 가중치 β','num','50강 판매 효과가 51강 도전 효과의 β배보다 클 때 판매. 기본 0.5 (T.020, 2026-10-10 96판: 판매가 100이라 0.03이면 50강을 거의 다 팔아 51강 도전이 모자람 — 0.03 대비 0.3~1이 −4h, 0.2 +0.2h, 0.01 +4.8h)'],
-    ['tRule','판매 강 유닛 (52~54강)','select','판단: 판매 강 1기를 팔 때의 초월 EXP 효과와 계속 강화할 때 56강 확률을 비교',[['judge','판단'],['credit','크레딧 되는 만큼 판매 (예전)'],['push56','안 팜 — 전부 56강까지 (56강만 판매)']]],
+    ['tRule','판매 강 유닛 (52~54강)','select','판단: 판매 강 1기를 팔 때의 초월 EXP 효과와 계속 강화할 때 56강 확률을 비교',[['judge','판단'],['credit','크레딧 되는 만큼 판매 (예전)']]],
     ['pushBias','판매 강 판단 가중치 β','num','크면 더 오래 팔고 늦게 강화로 돌림'],
     ['judgeEvery','판단 간격 (초)','num',''],
     ['sell50Frac','50강 판매 비율 상한 (0~1)','num','「크레딧 남는 만큼」일 때 50강 판매 비율'],
-    ['sell50Force','50강 판매 강제','select','',[['off','판단대로'],['all','늘 판매'],['none','안 팜'],['sleep','자는 동안만 늘 판매'],['pre','우주 +N(54강 계속 판매) 전만 늘'],['post','우주 +N 뒤 늘 (기본 — 57강용 단수작, 광산이 차 있을 때)'],['aw50000','단수 5만까지 늘 (기본)'],['aw100000','단수 10만까지 늘'],['aw1000000','단수 100만까지 늘']]],
-    ['sell49Force','49강 판매 구간 (비교용)','select','',[['judge','판단대로 (기본)'],['n50','첫 50강까지 안 팜, 그 뒤 판단'],['n50all','첫 50강까지 안 팜, 그 뒤 늘'],['f50','첫 50강까지 늘, 그 뒤 안 팜'],['f51','첫 51강까지 늘, 그 뒤 판단'],['aw10000','단수 1만까지 늘, 그 뒤 판단'],['aw50000','단수 5만까지 늘, 그 뒤 판단'],['aw50000x','단수 5만까지 늘, 그 뒤 안 팜'],['all','늘 판매'],['none','안 팜']]],
+    ['sell50Force','50강 판매 강제','select','',[['sleep','자는 동안만 늘 판매'],['pre','우주 +N(54강 계속 판매) 전만 늘'],['post','우주 +N 뒤 늘 (기본 — 57강용 단수작, 광산이 차 있을 때)'],['aw50000','단수 5만까지 늘 (기본)']]],
+    ['sell49Force','49강 판매 구간','select','',[['f51','첫 51강까지 늘, 그 뒤 판단'],['aw10000','단수 1만까지 늘, 그 뒤 판단'],['aw50000','단수 5만까지 늘, 그 뒤 판단'],['preU','우주 +N(54강 계속 판매) 전까지 늘, 그 뒤 판단 (기본 — 2인·T.027 48판: 판단대로보다 우주 +10 −0.07±0.04h · 첫 51강 −18분. 그 뒤 단수작은 크레딧이 모자라 50강 먼저)']]],
     ['exReserveH','초월 판매용으로 남길 크레딧 (시간치)','num','45~50강 판매는 이만큼 남기고 함'],
-    ['saleStage','초월 EXP용 판매 강','select','',[['auto','자동'],['52','52강'],['53','53강'],['54','54강']]],
-    ['sell54','54강 판매','select','',[['on','판매 강 후보에 넣음'],['off','안 팜 (계속 강화)']]],
-    ['tSwitchU','우주 +N까지는 판매 강 계속 판매','int','0 = 안 씀. N이면 우주 +N이 될 때까지 「크레딧 되는 만큼 판매」(54강 판매 상자로 우주를 빨리), 그 뒤 위 규칙. 기본 10 (T.020: 52~56강 판매가 1,000이라 우주 +10까지 54강을 계속 파는 게 가장 빠름 — 4면 +8h)'],
-    ['sell55','55강도 판매','select','',[['off','안 팜 (계속 강화)'],['on','팜']]]]},
+    ['tSwitchU','우주 +N까지는 판매 강 계속 판매','int','0 = 안 씀. N이면 우주 +N이 될 때까지 「크레딧 되는 만큼 판매」(54강 판매 상자로 우주를 빨리), 그 뒤 위 규칙. 기본 20 = 융합 전까지 사실상 계속 (2인·T.027·판 즉시 복구 48판, 첫 60강: 10이면 577h · 13 470h · 16 264h · 20 265h — 우주 +10 뒤 단수작·55·56강으로 넘어가면 우주가 늦게 올라 크게 손해. 49강 판매·50강 늘 판매·노말 상자·빠른 리셋 구간도 이 N을 따름)'],
+    ['sell55','55강도 판매','select','자동 판매 강 후보에 55강을 넣음 (시간당 초월 EXP가 가장 큰 강, 크레딧 되는 만큼)',[['on','팜 (기본)'],['off','안 팜 (계속 강화)']]],
+    ['sell56','56강도 판매','select','자동 판매 강 후보에 56강을 넣음 (융합 전). 초월 353 · 단수 1.2억 시작 24판: 54강만 첫 60강 189/199h · 55·56강 189~192/191~195h로 같음, 초월은 69h 2,088 → 2,430~2,490 (55강은 초월 400~550부터, 56강은 초월 약 1,940 · 7-1 160 · 7-2 80 · 55→56 4.2%에서 넘어감), 우주는 느려짐(+17 45h → 125h, 49강 60%면 43h)',[['on','팜 (기본)'],['off','안 팜']]],
+    ['sell55U','55·56강 판매는 우주 +N부터','int','기본 14. 0이면 바로(크레딧이 모자라 55강이 바로 이득이지만 우주 +14가 4h → 13h로 늦음). 14면 우주 +14(약 4h)까지 54강, 그 뒤 55·56강 — 초월 24h 1,609 · 우주 +14 4.2h 유지']]},
   {g:'뒤 단계 리방 · 엑보 · 사냥터', open:true, items:[
-    ['reboot','리방','select','리방하면 첫 달성 보상·엑보·허수광산 DPS 보상을 다시 받고 크리스탈을 다시 장착. 대신 사냥터·51강 이상 유닛을 잃고 다시 채워야 함',[['interval','정해진 시간마다'],['interval25k','간격 + 엑보 25,000타 받은 뒤'],['event','보상 기준 (엑보 25,000타 · N강 첫 달성 · DPS 보상)'],['fi25k','엑보 25,000타 받으면'],['fi5k','엑보 5,000타 받으면'],['never','안 함']]],
+    ['reboot','리방','select','리방하면 첫 달성 보상·엑보·허수광산 DPS 보상을 다시 받고 크리스탈을 다시 장착. 대신 사냥터·51강 이상 유닛을 잃고 다시 채워야 함',[['interval25k','간격 + 엑보 25,000타 받은 뒤'],['event','보상 기준 (엑보 25,000타 · N강 첫 달성 · DPS 보상)'],['fi25k','엑보 25,000타 받으면'],['fi5k','엑보 5,000타 받으면']]],
     ['wait25kHand','넘긴 판: 엑보 25,000타까지 리방 미루기 (분)','num','0 = 넘기자마자 리방(기본). 비교(24판, 2026-10-07): 30분 −0.17 · 60·90분 +0.13h — 기다릴 필요 없음'],
     ['rebootMin','리방 간격 (분)','num',''],
     ['rebootMaxMin','「간격 + 엑보」「보상 기준」일 때 최대 간격 (분)','num','조건을 못 채워도 이 시간이 되면 리방'],
@@ -2856,10 +2998,21 @@ const FIELDS = [
     ['rbLv','보상 기준: 이 판에서 첫 달성할 강','num','0 = 안 봄. 50이면 판마다 50강 첫 달성(크레딧 100만·무색 조각 3,737만)까지'],
     ['rbDps','보상 기준: 허수광산 DPS 보상 단계','num','0 = 안 봄, 1~6 = 1만·5만·30만·100만·300만·1,000만 DPS 보상까지'],
     ['rbExtraMin','보상 기준: 조건을 채운 뒤 더 할 시간 (분)','num','0 = 바로 리방'],
+    ['rbEarlyMin','초반 짧은 판: 조건을 채운 뒤 더 할 시간 (분)','num','초월 레벨이 아래 값 전이면 위 대신 이 값. 기본 2 — 2인·T.027 48판(ExPoint 노말 상자와 함께): 초월 10·20까지 2분 −0.09h, 30까지 −0.0h, 0분(보상만 받고 바로)은 +11h'],
+    ['rbEarlyEx','초반 짧은 판: 이 초월 레벨 전까지','num','0 = 안 씀. 기본 15 (남는 ExPoint가 「행운·경험 +10까지 노말 상자」면 둘 다 +10이 될 때 먼저 끝남)'],
     ['rbBurst','보상 기준: 몰아 리방 — 짧은 판 개수','num','0 = 안 씀. N이면 보상만 받고 바로 나가는 판 N개 → 긴 판 1개를 되풀이'],
     ['rbLongMin','보상 기준: 몰아 리방 — 긴 판에서 보상 뒤 더 할 시간 (분)','num',''],
-    ['rebootSec','리방 1회 걸리는 시간 (초)','num','나가기 → 새 방 → 로드 37초 + 세팅'],
-    ['hgFillSec','판 시작 → 준비 (초)','num','고유유닛·자동 세팅·보스 1~5. 사냥터는 그 뒤 도착하는 유닛으로 채움'],
+    ['rebootSec','리방 1회 걸리는 시간 (초)','num','기본 4 = 인게임 리방 칸 (사용자 영상 2026-10-13: 리셋 1~5초. 예전 기본 10). 예전 방 나가기 → 새 방 → 로드는 45'],
+    ['hgFillSec','판 시작 → 준비 (초)','num','고유유닛·자동 세팅·보스 1~5. 사냥터는 그 뒤 도착하는 유닛으로 채움. 기본 2 (사용자 영상 2026-10-12: 인게임 맵 리셋 뒤 3~4초에 사냥터 48/48, 6초 엑보 25,000타, 16초 첫 54강, 26초 허수광산 DPS 30만)'],
+    ['earlyDt','판 시작 1분 동안 계산 간격 (초)','num','기본 1 — 짧은 판·판 시작 보상 시각을 영상에 맞춤 (예전 10)'],
+    ['fastStartT','판 즉시 복구: 첫 이 강 뒤부터','num','기본 54 (0 = 안 씀). 리셋 직후 자판기가 51~54강을 바로 사서 지난 판 사냥터·광산이 돌아옴 — 사용자 영상 2026-10-12'],
+    ['fastSecA','판 즉시 복구: 53강까지 돌아오는 때 (초)','num','기본 3 (영상: 3~4초에 사냥터 48/48)'],
+    ['fastSecB','판 즉시 복구: 54강이 돌아오는 때 (초)','num','기본 4 (영상 2026-10-13: 리셋 4초 뒤 51~54강 첫 달성, 6초 56강 · 예전 영상 16초)'],
+    ['rbLateMin','빠른 리셋 구간: 보상 뒤 더 할 시간 (분)','num','-1 = 안 씀. 기본 2 — 판매 강이 아래 강 이상이고 우주 +N 전이면 위 보상 기준 대신 이 값(그 판 첫 54강 뒤 2분). 판 즉시 복구를 넣은 48판: 8분 대비 2분 −0.07~0.09h · 4분 −0.07h · 1분 +0.17h · 30초 +1.1h · 바로 = 30h 안에 우주 +10 못 감'],
+    ['rbLateT','빠른 리셋 구간: 판매 강 이 강부터','num','기본 54'],
+    ['rbLateLv','빠른 리셋 구간: 그 판에서 이 강을 처음 만든 뒤','num','기본 54 (첫 달성 크레딧)'],
+    ['rbLateDps','빠른 리셋 구간: 허수광산 DPS 보상 이 단계까지 받은 뒤','num','0~6 (3 = 30만)'],
+    ['dpsMul','허수광산 DPS 보정 (비교용)','num','1 = 시뮬 계산 그대로. 실제 계정이 54강 공업 등으로 DPS가 더 높을 때 (영상: 54강 48기로 30만 → 약 5)'],
     ['fiUnit','엑보 유닛','select','자동: 26 → 36 → 40 → 48 → 49 → 50강 → 엑보 타수 48 이상인 51강↑ 순서. 판 동안 못 빼서, 앞 판에서 「엑보 기다림」초 안에 나온 가장 좋은 단계를 기다렸다 넣음',[['auto','자동'],['fixed','고정 타수']]],
     ['fiWait','엑보 기다림 (초)','num','이 시간 안에 목표 단계가 안 나오면 그때까지 나온 가장 좋은 것'],
     ['fiMult','엑보 51강↑ 피해 배수','num','영상 확인(2026-10-06): 공격 1번에 공격력 × 4 + 1 (51강 30 → 121, 52강 200 → 801). 기본 4배 + 강타의 보석 1개당 +1. 50강 이하는 타수만'],
@@ -2869,38 +3022,50 @@ const FIELDS = [
     ['mineMinLv','사냥터에 넣을 최소 강 (51~56)','int',''],
     ['mineStep','유지할 광산 단 (0~20)','int','광산 포인트는 ExPoint 1개 = 1점(상점 환율 표), k단 = 10,000 × (k−1)² + 1점 이상, 한 프레임마다 단수만큼 닳음. 광산 크레딧 = 강별 배수 × 단(곱연산). 기본 16은 T.020 때 ExPoint 1개 = 1,000점으로 셈하던 값이라 다시 정해야 함'],
     ['mine2x','광산 크레딧 2배권','select','',[['on','씀'],['off','안 씀']]],
-    ['sleepH','하루 중 자리 비우는 시간 (시간)','num','0 = 계속 플레이']]},
+    ['mineMode','광산 단 정하는 법','select','ExPoint 1 = 광산 포인트 1점, 매 프레임 단수만큼 늘 닳음(광산에 유닛이 없어도)',[['auto','가진 ExPoint로 mineHoldH시간 버틸 수 있는 가장 높은 단 (최대 위 단)'],['fixed','광산에 유닛이 있으면 늘 위 단']]],
+    ['mineHoldH','광산 단 auto: 몇 시간 버틸 ExPoint','num','작을수록 일찍 높은 단'],
+    ['mineFrom','광산 포인트 사기 시작','select','초월 353 · 단수 1.2억 시작 24판: 처음부터 첫 60강 중앙 189h · 융합 뒤부터 189h · 아예 안 삼 188h — 크레딧이 8시간쯤부터 남아돌아 광산 크레딧이 안 쓰임',[['start','처음부터 (기본)'],['fuse','융합(57강 긴 판) 시작 뒤부터 — 그 전엔 ExPoint 모음']]],
+    ['sleepH','하루 중 자리 비우는 시간 (시간)','num','0 = 계속 플레이'],
+    ['sleepRoom','자리 비울 때 (잠방)','select','sale = 자리를 비우기 시작하면 판매 할인 크리스탈로 새 판을 열고 깰 때까지 (45~50강 판매가 할인 — 우주 +10 50% · 흑색 +12 24% · 절약·주황·보라 각 10%면 100%). 초월 352 · 우주 +10에서 8시간: 깰 때 단수 1.2억 → 1.8억 · 무조 ×15 · 초월 +52 · 우주·54강 판매 같음. 처음부터 하루 8시간 48판 첫 60강은 비슷(263h → 266h ±4)',[['sale','판매 할인 크리스탈로 잠방 (기본)'],['normal','그대로']]],
+    ['eqSleepOrder','잠방 크리스탈 (먼저 낌)','text','기본 우주·흑색·절약·주황·보라 → 백색·남색·무색']]},
   {g:'뒤 단계 ExPoint', items:[
     ['hot','핫타임 쿠폰 (100 EP/시간)','select','',[['on','항상 켬'],['off','안 씀']]],
     ['special','특별 핫타임 (1만 EP/시간)','select','',[['on','남는 EP로 켬'],['off','안 씀']]],
     ['specCoupon','특수확률 +5% 쿠폰 (500 EP/시간)','select','40~43강 원확률 +5%p',[['on','씀'],['off','안 씀']]],
     ['epReserve','남겨 둘 ExPoint','num',''],
     ['spareKeep','상자·크레딧으로 바꿀 때 더 남겨 둘 ExPoint','num','남는 ExPoint를 상자·크레딧으로 바꿀 때 이만큼은 더 둠 — 0이면 긴 판에서 특핫·광산 2배가 꺼져 손해'],
-    ['epSpare','그래도 남는 ExPoint','select','',[['keep','모아 둠'],['rare','레어 크리스탈 상자 (4만)'],['credit','크레딧 (1 EP = 1,000, T.020)'],['box','노말 크리스탈 상자 (1천)']]]]},
+    ['epSpare','그래도 남는 ExPoint','select','',[['boxNormU','노말 크리스탈 상자 (1천) — 행운·경험 +10까지, 그 뒤 모아 둠(광산용) (기본 — 2인·T.027 48판: 처음부터 모아 둠보다 우주 +10 −0.24h)'],['boxPreU','노말 크리스탈 상자 — 우주 +N 전까지, 그 뒤 모아 둠'],['boxRareU','노말 상자 — 행운·경험 +10까지, 그 뒤 우주 +N 전까지 레어 상자(4만)'],['rare','레어 크리스탈 상자 (4만)'],['credit','크레딧 (1 EP = 1,000, T.020)'],['box','노말 크리스탈 상자 (1천) — 끝까지']]]]},
   {g:'뒤 단계 스탯 · 보석 · 크리스탈', open:true, items:[
     ['statMode','일반 스탯 배분','select','최적: 레벨업 포인트를 ln(시간당 50강)이 1포인트당 가장 많이 느는 곳에',[['opt','50강 생산 최적'],['order','1~3쪽·4-1 마스터 → 3P-6']]],
-    ['gemFirst','뒤 단계 먼저 살 보석 (키:개수, 순서대로)','text','경험·숙련·성취는 자동 보석 사기가 고르지 못해 여기서 먼저 삼(다음 1개 값만큼 남겨 둠). exp 경험 · mastery 숙련 · achieve 성취. 기본 경험 1,000 → 숙련 60 → 성취 30 (T.020 96판: 숙련 빼면 +18h · 성취 빼면 +10h · 성취 50까지 +11h)'],
-    ['gemFirstMode','먼저 살 보석이 비쌀 때 (뒤 단계)','select','',[['reserve','그 값만큼 남겨 두고 모음'],['free','살 수 있을 때만 (생산 보석 안 막음)']]],
+    ['gemFirst','뒤 단계 먼저 살 보석 (키:개수, 순서대로)','text','경험·숙련·성취는 자동 보석 사기가 고르지 못해 여기서 먼저 삼(다음 1개 값만큼 남겨 둠). exp 경험 · mastery 숙련 · achieve 성취 · patience 인내. 기본 경험 1,000 → 숙련 60 → 성취 30 → 인내 1,000 → 성취 70 → 초월 500 → 수호 400 → 성취 100 (성취 100 마무리: 우주 +13 −3.1h · 우주 +10 같음, 초월 500 전에 사면 우주 +10 +0.06~0.08h, 숙련 100은 우주 +13 +0.2~0.3h라 안 함 — 2인·T.027 48판) (예전 비교 2인·T.027 48판: 인내 뒤 성취 50 −0.15h · 60 −0.20h · 70 −0.24h · 80 −0.24h · 100 −0.10h, 숙련 뒤 바로 성취 100은 같음. 숙련·성취를 안 사면 우주 +10을 30h 안에 못 감)'],
     ['gemMode','보석 사기 (무색 조각)','select','',[['auto','자동'],['off','안 삼']]],
     ['gemEvery','보석 살 간격 (초)','num',''],
-    ['exTarget','초월 스탯 기준','select','',[['goal','목표 강'],['sale','지금 판매 강']]],
     ['dpsAtk','DPS 문턱용 공업 (6쪽)','select','',[['on','함'],['off','안 함']]],
     ['craftOrder','크리스탈 제작 순서 (키:목표 단계)','text',CRY_KEYS_HELP],
     ['eqOrder','크리스탈 장착 순서','text','판 시작마다 슬롯 수만큼 (+1 이상만), 그 판 동안 못 바꿈'],
-    ['eqBySlot','슬롯 수별 장착 목록 (먼저 낌)','text','「슬롯수:코드,…」를 |로 나눔. 그 슬롯 수일 때 이 목록을 먼저, 모자라면 위 순서로 채움. 기본 3:무색·경험·행운 — T.020(2026-10-10 96판): 기본 순서보다 −0.43h, 1~3칸 각성 먼저(T.019 기본)는 +0.1h'],
-    ['cry0','시작 크리스탈 (키:강)','text','처음부터 가진 크리스탈. 예: c20:3, c18:10'],
-    ['disasm','제작 목록 밖 크리스탈','select','',[['off','보관'],['on','분해']]],
-    ['saleEvery','크리스탈 투트랙: 판매 판 간격','int','0 = 한 세트만'],
-    ['bankCredits','투트랙: 크레딧 모으기','select','',[['off','안 함'],['on','모음']]],
-    ['eqSaleOrder','판매 판 크리스탈 장착 순서','text','']]},
-  {g:'지정 스펙 (「지정 스펙에서 시작」일 때만)', items:[
-    ['level','일반 레벨','int',''],
-    ['awaken','고유유닛 추가 단수','int','총 1,200단 = 1,094'],
-    ['gems','보석 (키:개수)','text','low · mid · high · special · premium · wealth · guard · ultimate · accel · protect · transcend · patience · hostile · exp · mastery · achieve'],
-    ['exLv0','초월 레벨','int',''],
+    ['eqBySlot','슬롯 수별 장착 목록 (먼저 낌)','text','「슬롯수:코드,…」를 |로 나눔. 그 슬롯 수일 때 이 목록을 먼저, 모자라면 위 순서로 채움. 기본 2:경험·행운 | 3:무색·경험·행운 — 2인·T.027 48판: 2칸에 행운(무색·행운도 같음) −0.08h, 3칸 한 자리를 각성으로 +0.5~1.0h, 4칸은 기본 순서(우주·흑색·백색·남색)가 행운 넣기보다 −0.1~0.9h. T.020: 3칸 기본 순서보다 −0.43h. 7·8칸: 우주·흑색·백색·무색·각성·노랑·하늘색(·남색) — 자판기 돈이 단수에 비례해 51강 구매가 늘어 초월도 결국 빨라짐(처음부터 24판 60강 기대 122.2 → 118.4h, 초월 851·1,084·1,478 상태 −2.2 · −2.5 · −1.4h, 6칸부터 끼면 120.0h로 손해, 판마다 번갈아(각보 판 · 초월 EXP 판)는 102.8h로 기본과 같음). 8칸: 퀘이사 길운·집중·절제·증식(+1 이상일 때)을 먼저 — 60강 판 24시간 리셋 · 59강 판매 판단 40시간과 함께 초월 1,563 상태 75.4h(무구 넣고 길운 빼면 81.5h), 처음부터 94.2h'],
+    ['disasm','제작 목록 밖 크리스탈','select','',[['off','보관'],['on','분해']]]]},
+  {g:'지금 내 상태에서 시작 (「시작」을 「지정 스펙」으로 — 새 판을 여는 순간부터)', open:true, items:[
+    ['t0H','게임 시작 뒤 지난 시간 (현실 시간)','num','레벨 1로 시작한 뒤 몇 시간 지났는지. 엑보 줄 하루 해금(아래 「출시 몇 시간 뒤 시작」과 더해 날짜를 셈)과 융합 시작 시각(fuseFrom hN)이 이 시계를 씀'],
+    ['level','일반 레벨','int','L창 레벨'],
+    ['exLv0','초월(Ex) 레벨','int','50강을 뽑기 전이면 0 대신 1로'],
+    ['awaken','고유유닛 각성 단수','int','각성 레벨만 (고유유닛 승급 106단은 빼고). 예: 단수 1,200 = 1,094'],
+    ['race0','고유유닛 승급 (키:단계)','text','빈칸 = 106단 전부 다 찍음. Q 공속(6) · W 공격력(20) · E 판매EXP(20) · A +1확률(20) · S 특수확률(10) · D 사냥터 위치(10) · X 특수 파괴방지(20). 예: Q:6, W:20, E:20, A:20, S:10, D:10, X:15 (안 적은 옵션은 최대로 봄)'],
+    ['mission0','지금 미션 번호','int','진행 중인 미션 번호(1~43). 0 = 전부 깸'],
     ['credits0','크레딧','num',''],
     ['ep0','ExPoint','num',''],
-    ['crs0','크리스탈 조각','num','']]}
+    ['crs0','크리스탈 조각','num',''],
+    ['sh0','무색 조각','num',''],
+    ['awg0','각성의 보석 (안 쓴 것)','num',''],
+    ['cs0','응축된 무색 조각','num',''],
+    ['adv0','상급 크리스탈 조각','num','(모아 두기만 함)'],
+    ['minePts0','광산 포인트','num','L창 3쪽 「광산 포인트 : N 점」'],
+    ['cp0','쿠폰 남은 시간 (키:시간)','text','hot 핫타임 · special 특별 핫타임 · exp 경험치 · sell2x 45~50강 판매 2배 · spec 특수확률 +5% · mine2x 광산 크레딧 2배권. 예: hot:3, special:1.5, exp:200'],
+    ['gems','보석 (키:개수)','text','low 하급 · mid 중급 · high 상급 · special 특급 · premium 고급 · wealth 재물 · guard 보호 · ultimate 궁극 · accel 촉진 · protect 수호 · transcend 초월 · patience 인내 · hostile 적대 · exp 경험 · mastery 숙련 · achieve 성취'],
+    ['orbs0','보주 (키:개수)','text','low 하급 · mid 중급 · high 상급 · sp 특급 · pr 고급 · exp 경험 · save 절약 · power 힘 · status 지위 · might 권력 · mine 채광 · divine 신위 · crit 절명 · glut 폭식 · eon 영겁 · fate 명운 · nebula 성운 · heaven 천운 · void 무위'],
+    ['st0','일반 스탯 (키:레벨)','text','빈칸 = 레벨 포인트로 자동(시간당 50강 최적). 적으면 그대로 두고 남는 포인트만 자동. 키: 1_1 돈 · 1_2 공업 · 1_3 +1확률 · 1_4 +2확률 · 1_5 +3확률 · 1_6 특수확률 · 2_1~2_6 · 3_1~3_5 44~48강 · 3_6 촉진 · 4_1 LV.MAX 무조. 예: 1_3:100, 1_2:100, 3_6:300'],
+    ['ex0','초월 스탯 (키:Lv)','text','빈칸 = 효율대로 자동. 적으면 그대로 두고 남는 포인트만 자동. 키: 5_1 초월확률 · 5_2~5_6 51~55강 · 6_1~6_6 51~56강 공업 · 7_1 54강2 · 7_2 55강2 · 7_3 융합 · 7_4 57강 · 7_5 58강 · 7_6 응무조 · 8_1·8_2 자판기 촉진 · 8_3 광산 채취효율'],
+    ['cry0','크리스탈 (키:강)','text','가진 크리스탈 강. 예: c20:10, c18:10, c19:10, c17:10, c3:10 (코드는 「뒤 단계 스탯 · 보석 · 크리스탈」의 제작 순서 설명 참고)'],]},
 ];
 
 const RUN_EXPLAIN = `<div class="explain"><b>판 수 · 시드</b>: 강화와 뽑기는 운이라 여러 번 돌려 <b>빠른 판(상위 10%) · 보통(중앙값) · 느린 판(하위 10%)</b>을 봅니다. 시드가 같으면 주사위가 똑같이 굴러가서, 설정만 바꿔 다시 돌리면 차이는 전략 차이입니다. 한 판이 수백~수천 시간이라 24판에 수십 초 걸릴 수 있습니다.</div>`;
@@ -2986,7 +3151,7 @@ function renderBaseInfo(){
     <p class="note"><b>앞 단계</b>: 레벨 1 완전 초기화 · 후원 LV.20 · 혼자 · 멀티 보너스. 유닛 하나하나 강화를 굴리고 사람 조작·이동 시간을 넣음. 두 자판기 촉진이 모두 ${P.handoffBoost}을 넘으면 넘김 (첫 50강 뒤에도 그때까지 유닛 단위 — 50강은 사냥터 → 판매 → 51강 도전 0.01%, 51강이 나오면 바로 넘김).<br>
     <b>넘기는 것</b>: 레벨·경험치·스탯·승급·보석·각성·크레딧·무조·ExPoint·쿠폰 남은 시간·지금 판의 사냥터(41강↑)·첫 달성·엑보 진행·미션 번호·개인보스 6~10.<br>
     <b>뒤 단계</b>: 1~43강은 흐름 공식, 44강부터 단계마다 도착 → 사냥터 → 판매(판단) → 강화를 개수로 굴림. 초월 레벨은 처음부터 1 (시작부터 50→51강 0.01%, 사용자 확인).<br>
-    <b>목표</b>: ${P.goalCry > 0 ? `우주 크리스탈 +${P.goalCry}` : `${P.goal}강 첫 달성`}.</p>`;
+    <b>목표</b>: ${P.goal60 !== 'off' ? '첫 60강' : '우주 크리스탈 +' + (P.goalCry > 0 ? P.goalCry : 10)}.</p>`;
     return;
   }
   const b = E.baseInfo(P), n52 = b.ch.N[52], n51 = b.ch.N[51];
@@ -3038,12 +3203,13 @@ async function startRun(){
 
 // ---------- 결과 ----------
 const CRY_NAME = Object.fromEntries(E.CRY.map(c => [c.k, c.name]));
-const CRY_GRADE = Object.fromEntries(E.CRY.map(c => [c.k, {N:'노말', R:'레어', U:'유니크', G:'갤럭시'}[c.g]]));
+const CRY_GRADE = Object.fromEntries(E.CRY.map(c => [c.k, {N:'노말', R:'레어', U:'유니크', G:'갤럭시', Q:'퀘이사'}[c.g]]));
 const P1GEM_NAME = {low:'하급', mid:'중급', high:'상급', special:'특급', premium:'고급', wealth:'재물', guard:'보호', ultimate:'궁극', hostile:'적대', accel:'촉진', protect:'수호', transcend:'초월', exp:'경험', mastery:'숙련', achieve:'성취', patience:'인내'};
 function renderResults(P, results){
   const done = results.filter(r => r.done), times = done.map(r => r.t), ok = results.filter(r => !r.failedIn);
   const el = document.getElementById('results');
-  let h = `<h2>${P.goalCry > 0 ? `우주 크리스탈 +${P.goalCry}까지` : `${P.goal}강 첫 달성까지`} 걸린 시간 (${results.length}번, 현실 시간)</h2>
+  const g60 = P.goal60 !== 'off';
+  let h = `<h2>${g60 ? (P.goal60End === 'e1' ? '60강 기대값 1기까지' : '첫 60강까지') : `우주 크리스탈 +${P.goalCry > 0 ? P.goalCry : 10}까지`} 걸린 시간 (${results.length}번, 현실 시간)</h2>
     <div class="stats">
       <div class="stat"><div class="k">빠른 쪽 (상위 10%)</div><div class="v">${fmtT(pct(times, 0.1))}</div></div>
       <div class="stat"><div class="k">보통 (중앙값)</div><div class="v">${fmtT(pct(times, 0.5))}</div></div>
@@ -3057,7 +3223,11 @@ function renderResults(P, results){
   [40,44,45,48,49].forEach(s => { const a = col(r => r.firstGe && r.firstGe[s]); if (a.length) h += rowOf(`첫 ${s}강 (앞 단계)`, a); });
   h += rowOf('첫 50강', col(r => r.firstGe && r.firstGe[50]));
   { const a = col(r => r.p1 && r.p1.t); if (a.length) h += rowOf('뒤 단계로 넘김', a); }
-  [51,52,53,54,55,56].filter(s => s <= P.goal).forEach(s => { h += rowOf(`첫 ${s}강`, col(r => r.firstT && r.firstT[s])); });
+  [51,52,53,54,55,56].filter(s => s <= P.goal || g60).forEach(s => { h += rowOf(`첫 ${s}강`, col(r => r.firstT && r.firstT[s])); });
+  if (g60){ { const a = col(r => r.fuseStartT); if (a.length) h += rowOf('융합 시작', a); }
+    [57,58,59].forEach(s => { const a = col(r => r.firstT && r.firstT[s]); if (a.length) h += rowOf(`첫 ${s}강`, a); });
+    [[0.5,'60강 기대값 0.5기'],[0.693,'60강 기대값 0.693기 (= 첫 60강 시각의 중앙값)'],[1,'60강 기대값 1기']].forEach(([k, nm]) => { const a = col(r => r.e60T && r.e60T[k]); if (a.length) h += rowOf(nm, a); });
+    { const a = col(r => r.first60T); if (a.length) h += rowOf('실제 첫 60강', a); } }
   for (let L = 1; L <= 20; L++){ const a = col(r => r.u20T && r.u20T[L]); if (a.length) h += rowOf(`우주 크리스탈 +${L}`, a); }
   { const a = col(r => r.pushT); if (a.length) h += rowOf('판매 강 유닛을 처음 계속 강화로 돌린 시각', a); }
   [10,30,100,300,1000].forEach(L => { const a = col(r => r.exT && r.exT[L]); if (a.length) h += rowOf(`초월 레벨 ${L.toLocaleString()}`, a); });
@@ -3102,6 +3272,23 @@ function renderResults(P, results){
     <tr><td class="txt">뒤 단계 판 (넘긴 판 제외): 판 수 · 판 길이 · 판 시작 → 엑보 25,000타 · 이 판 50강 첫 달성 (평균 분)</td><td>${(() => { const rm = []; ok.forEach(r => (r.rooms || []).forEach(x => { if (!x.fromInit) rm.push(x); })); const mm = f => { const a = rm.map(f).filter(v => v != null); return a.length ? (a.reduce((s, v) => s + v, 0) / a.length / 60).toFixed(1) : '-'; }; return rm.length ? `${(rm.length / ok.length).toFixed(1)}판 · ${mm(x => x.d)}분 · ${mm(x => x.k25)}분 · ${mm(x => x.f50)}분` : '-'; })()}</td></tr>
     <tr><td class="txt">판 하나에서 받는 것 (평균): 첫 달성 크레딧 · 엑보 ExPoint · 첫 달성 무색 조각</td><td>${(() => { const rm = []; ok.forEach(r => (r.rooms || []).forEach(x => { if (!x.fromInit) rm.push(x); })); const mg = k => rm.length ? fmtKR(rm.reduce((s, x) => s + (x.g[k] || 0), 0) / rm.length) : '-'; return `${mg('crFirst')} · ${mg('ep')} · ${mg('shFirst')}`; })()}</td></tr>
     </table>`;
+  if (g60){   // 60강 단계 (평균)
+    const ag = (f) => avg(r => f(r) || 0), u = (k, lv) => fmtKR(ag(r => (r.unit60 || {})[k] && r.unit60[k][lv]));
+    const orbStr = Object.keys(E.ORB_NAME).map(k => { const v = ag(r => (r.orb || {})[k]); return v >= 0.5 ? E.ORB_NAME[k] + ' ' + Math.round(v) : ''; }).filter(Boolean).join(' · ') || '-';
+    const stepH = (() => { const t = {}; ok.forEach(r => { for (const k in (r.mineStepH || {})) t[k] = (t[k] || 0) + r.mineStepH[k]; }); const ks = Object.keys(t).map(Number).sort((a, b) => a - b); return ks.length ? ks.map(k => k + '단 ' + (t[k] / ok.length).toFixed(0) + 'h').join(' · ') : '-'; })();
+    h += `<h2>60강 단계 (평균)</h2><table><tr><th>항목</th><th>값</th></tr>
+      <tr><td class="txt">57 · 58 · 59강: 광산에 넣음</td><td>${u('mine',57)} · ${u('mine',58)} · ${u('mine',59)}</td></tr>
+      <tr><td class="txt">57 · 58강 · 59강: 판매 (응축된 무색 조각 → 보주)</td><td>${u('sold',57)} · ${u('sold',58)} · ${u('sold',59)}</td></tr>
+      <tr><td class="txt">57 · 58 · 59강: 위로 보냄 (59강 = 60강 도전)</td><td>${u('push',57)} · ${u('push',58)} · ${u('push',59)}</td></tr>
+      <tr><td class="txt">끝 60강 기대값 · 실제 60강 (기)</td><td>${ag(r => r.e60).toFixed(2)} · ${ag(r => r.n60).toFixed(2)}</td></tr>
+      <tr><td class="txt">융합 시도 · 56강 넣음</td><td>${fmtKR(ag(r => r.fuseAtt))} · ${fmtKR(ag(r => r.fused56))}</td></tr>
+      <tr><td class="txt">끝 보주</td><td style="font-size:.72rem">${orbStr}</td></tr>
+      <tr><td class="txt">응축된 무색 조각: 번 것 · 보주에 씀</td><td>${fmtKR(ag(r => r.cond && r.cond.cs))} · ${fmtKR(ag(r => r.cond && r.cond.orbSpent))}</td></tr>
+      <tr><td class="txt">광산 단별 시간</td><td style="font-size:.72rem">${stepH}</td></tr>
+      <tr><td class="txt">ExPoint: 엑보 줄에서 · 광산 포인트에 씀 · 끝에 남음</td><td>${fmtKR(ag(r => r.fiEp))} · ${fmtKR(ag(r => r.mineEp))} · ${fmtKR(ag(r => r.ep))}</td></tr>
+      <tr><td class="txt">엑보 줄 가장 높은 곳 (타)</td><td>${fmtKR(E.FI_LINES[Math.round(ag(r => r.fiLineMax))].n)}</td></tr>
+      </table><p class="note">엑보 줄에서 받는 상급 크리스탈 조각 · 퀘이사 상자 · 은하의 조각은 모아 두기만 함(퀘이사 크리스탈 · 우주 +21↑ 효과는 이 시뮬에 없음).</p>`;
+  }
   // 쓴 크리스탈 (장착한 것만, 계산기에 넣을 목록)
   const usedKeys = E.CRY.map(c => c.k).filter(k => ok.some(r => (r.cryH || {})[k] > 0));
   const totH = avg(r => Object.keys(r.cryH || {}).length ? Math.max(...Object.values(r.cryH)) : 0);
@@ -3182,81 +3369,23 @@ function growthSVG(sm){
 }
 
 // ---------- 전략 비교 ----------
-const PRESETS = [
+const PRESETS = [   // 예전에 손해로 나온 비교는 뺌(2026-10-13). 지금 기본과 비슷하게 나왔던 대안만
   ['지금 설정 그대로', {}],
-  ['엑보 36강 사서 넣기 + 목표 단계 기다림 (예전)', {fiPick:'36', fiUp:'off', rerollAfter25k:2}],
-  ['엑보 26강 고정 (높은 강으로 안 바뀔 때) + 5,000타마다 리방', {fiUp:'f26', rerollAfter5k:1, reboot:'fi5k'}],
-  ['엑보 26강 고정 + 앞 단계 5,000타 리방 1번 (뒤 단계 15분)', {fiUp:'f26', rerollAfter5k:1}],
-  ['넘김: 첫 50강 (v1 방식)', {handoffBoost:0}],
-  ['보석: 경험 보석 안 삼 (앞·뒤)', {gemFirst1:'hostile:20, accel:3, wealth:10', gemFirst:'achieve:30, mastery:60'}],
-  ['보석: 앞 단계 경험 안 삼', {gemFirst1:'hostile:20, accel:3, wealth:10'}],
-  ['보석: 앞 단계 경험만 먼저 (예전 기본, 첫 50강 +8.5분)', {gemFirst1:'exp:1000'}],
-  ['2판 LV.2 사냥터 DPS 500만에서 멈추고 41강으로 (첫 50강 +2분)', {lv2StopDps:5e6}],
-  ['보석: 앞 단계 경험 남겨 두고 모음', {gemFirstMode1:'reserve'}],
-  ['보석: 뒤 단계 남겨 두고 모음', {gemFirstMode:'reserve'}],
-  ['보석: 뒤 단계 경험만', {gemFirst:'exp:1000'}],
-  ['보석: 뒤 단계 먼저 살 보석 없음', {gemFirst:''}],
-  ['보석: 앞 단계 경험 + 숙련 10', {gemFirst1:'hostile:20, accel:3, wealth:10, exp:1000, mastery:10'}],
-  ['넘김: 촉진 30 넘으면', {handoffBoost:30}],
-  ['크레딧 배정 10분 (바로 씀)', {saleHorizonH:1/6}],
-  ['크레딧 배정 3시간 (아껴 둠)', {saleHorizonH:3}],
-  ['크레딧 배정 10시간', {saleHorizonH:10}],
-  ['45~50강 예전 규칙 (50강만, 크레딧 남는 만큼)', {sell50Rule:'credit', sell50Frac:1}],
-  ['앞 단계 45~49강 판매 안 함', {sellMode:'off'}],
-  ['45~48강 판매 끝: 판단만 (예전 기본)', {lowSellEnd:'auto'}],
-  ['45~48강 판매 끝: 처음 47강', {lowSellEnd:'f47'}],
-  ['45~48강 판매 끝: 처음 49강', {lowSellEnd:'f49'}],
-  ['45~48강 판매 안 함 (49강은 팜)', {lowSellEnd:'never'}],
-  ['첫 50강 뒤 1시간까지 45강 계속 판매', {lowSellEnd:'p60'}],
-  ['45~48강 판매 때 크레딧 100만 남김 (판단만)', {lowSellEnd:'auto', lowSellReserve:1e6}],
-  ['45강 판매 시작을 첫 47강부터 (첫 50강 +3.6분)', {lowSellStart:'f47'}],
-  ['49강 판매 안 함 (첫 51강 +1.4h)', {sell49:'off'}],
-  ['앞 단계 4-1 상한 없음 (예전)', {cap41:-1}],
-  ['앞 단계 4-1 상한 2', {cap41:2}],
-  ['앞 단계 4-1 상한 0 (안 찍음)', {cap41:0}],
-  ['슬롯 3개도 기본 순서 (무색·경험·남색, 예전)', {eqBySlot:''}],
-  ['앞 단계 행운 +2 (이미 가짐)', {p1Cry:'c2:2', cry0:'c2:2'}],
-  ['앞 단계 EP로 행운 +1 상자 구매', {p1LuckLv:1}],
-  ['남는 ExPoint를 크레딧으로 (예전)', {epSpare:'credit'}],
-  ['앞 단계 엑보 5,000타 리방 안 함 (예전)', {rerollAfter5k:0}],
-  ['앞 단계 40~48강: 파방·확률 판단', {climbRule:'auto'}],
-  ['앞 단계 40~48강: 파방·확률 판단 (올림 ×2)', {climbRule:'auto', climbBias:2}],
-  ['앞 단계 40~48강: 파방·확률 판단 (올림 ×0.5)', {climbRule:'auto', climbBias:0.5}],
-  ['사냥터 최고 48강', {hgMaxStage:48}],
-  ['사냥터 최고 49강', {hgMaxStage:49}],
-  ['리방: 10분마다', {rebootMin:10}],
-  ['리방: 30분마다', {rebootMin:30}],
-  ['리방: 60분마다', {rebootMin:60}],
-  ['앞 단계: 25,000타부터 특핫 · 리방 없음 (15차 기본)', {spHotWhen:'after25k', rerollAfter5k:0}],
-  ['앞 단계: 40강 게임 70분까지 모아 두기', {hold40Min:70}],
-  ['앞 단계 ExPoint: 특핫 승급 뒤 우선 · 판매 크레딧 처음부터 (14차 기본)', {spHotWhen:'afterUp', specLate:'off', specStart:'40', hotAlways:'off', floorWhen:'always'}],
-  ['앞 단계 ExPoint: 특핫은 45~50강 팔 때만 (예전)', {spHotWhen:'sell', specLate:'off', specStart:'40', hotAlways:'off', floorWhen:'always'}],
-  ['목표: 첫 56강에서 끝', {goalCry:0}],
-  ['우주 목표: 각성 크리스탈·단수 5만 먼저 안 함 (예전)', {craftOrder:'c17:10, c3:10, c12:10, c14:10, c18:5, c19:5, c20:20, c18:10, c19:10, c4:10, c13:10', eqBySlot:'3:c17, c3, c2', sell50Force:'off'}],
-  ['우주 목표: 예전 뒤 단계 (120분 판 · 50강 β 0.3 · 흑백 +10 먼저)', {lateRoomMin:120, judgeBias:0.3, craftOrder:'c17:10, c3:10, c12:10, c14:10, c18:10, c19:10, c20:20, c4:10, c13:10'}],
-  ['우주 목표: 하루 8시간 수면', {sleepH:8}],
-  ['우주 목표: 긴 판 안 씀 (계속 10분 판)', {lateRoomMin:0}],
-  ['우주 목표: 제작 무색·경험 → 우주', {craftOrder:'c17:10, c3:10, c20:20, c12:10, c14:10, c18:10, c19:10, c4:10, c13:10'}],
-  ['우주 목표: 54강 계속 판매 안 함 (판단만)', {tSwitchU:0}],
-  ['우주 목표: 54강 판매 안 함', {tSwitchU:0, sell54:'off'}],
-  ['우주 목표: 56강만 판매', {tSwitchU:0, tRule:'push56'}],
-  ['리방: 15분마다 (예전 기본)', {reboot:'interval', rebootMin:15}],
-  ['리방: 보상(엑보 25,000타 + 50강 첫 달성) 받으면 바로', {reboot:'event', rbExtraMin:0}],
-  ['리방: 56강 뽑을 때만 (사실상 안 함)', {reboot:'event', rbNeed25k:'off', rbLv:56, rebootMaxMin:99999}],
-  ['리방: 간격 10분 + 엑보 25,000타 (최대 30분)', {reboot:'interval25k', rebootMin:10, rebootMaxMin:30}],
-  ['리방: 엑보 25,000타마다', {reboot:'fi25k'}],
-  ['특수확률 쿠폰 안 씀', {specCoupon:'off'}],
-  ['특별 핫타임 안 씀 (뒤 단계)', {special:'off'}],
-  ['판매 강 유닛: 예전 규칙', {tRule:'credit'}],
-  ['50강 판단 β 3', {judgeBias:3}],
-  ['50강 판단 β 1 (우주 목표 전 기본)', {judgeBias:1}],
-  ['우주 목표: 50강 늘 판매', {sell50Force:'all'}],
-  ['우주 목표: 50강 안 팜', {sell50Force:'none'}],
-  ['우주 목표: 단수 10만까지 50강 계속 판매', {sell50Force:'aw100000'}],
-  ['우주 목표: 잘 때만 50강 판매 (수면 8시간)', {sleepH:8, sell50Force:'sleep'}],
-  ['엑보 51강↑ 피해 ×1 (예전 가정)', {fiMult:1}],
-  ['크리스탈 투트랙: 4판마다 판매 판', {saleEvery:4}],
-  ['장착: 우흑무백경', {eqOrder:'c20, c18, c17, c19, c3, c12, c14, c4, c13, c16, c10, c6, c8, c11, c5, c15, c2, c9, c7, c1'}]
+  ['앞 단계 49강 60%', {sell49PreFrac:0.6}],
+  ['54강만 판매 (55·56강 판매 안 함)', {sell55:'off', sell56:'off'}],
+  ['55·56강 판매 바로 (우주 +14 안 기다림)', {sell55U:0}],
+  ['융합 초월 2,700', {fuseFrom:'x2700'}],
+  ['융합 초월 3,000', {fuseFrom:'x3000'}],
+  ['융합 중 49강 50%', {sell49FuseFrac:0.5}],
+  ['60강 단계 판매 판단 30시간', {sellH:30}],
+  ['경험의 보주 30시간치', {orbExpH:30}],
+  ['판 1분 (첫 54강 뒤)', {rbLateMin:1}],
+  ['판 1분 30초', {rbLateMin:1.5}],
+  ['광산 55강 채우기', {mineFill:55}],
+  ['광산 포인트 융합 뒤부터', {mineFrom:'fuse'}],
+  ['판마다 초월 스탯 다시 찍기', {exResetRoom:'on'}],
+  ['하루 8시간 자리 비움 (잠방)', {sleepH:8}],
+  ['하루 8시간 자리 비움 (그대로)', {sleepH:8, sleepRoom:'normal'}]
 ];
 async function runPresetList(base, list, title){
   const status = document.getElementById('status'), bar = document.getElementById('progBar');
@@ -3275,11 +3404,18 @@ async function runPresetList(base, list, title){
 function summarize(name, ov, res, P){
   const ts = res.filter(r => r.done).map(r => r.t);
   return {name, ov, p10:pct(ts, 0.1), p50:pct(ts, 0.5), p90:pct(ts, 0.9), score:scoreOf(res, P), fail:res.length - ts.length, n:res.length,
-    reb:mean(res.map(r => r.reboots)), ex:pct(res.map(r => r.exLv), 0.5), f52:pct(res.map(r => r.firstT[52]).filter(v => v != null), 0.5), f54:pct(res.map(r => r.firstT[54]).filter(v => v != null), 0.5)};
+    reb:mean(res.map(r => r.reboots)), ex:pct(res.map(r => r.exLv), 0.5), f52:pct(res.map(r => r.firstT[52]).filter(v => v != null), 0.5), f54:pct(res.map(r => r.firstT[54]).filter(v => v != null), 0.5),
+    e60:pct(res.map(r => r.e60T && r.e60T[0.693]).filter(v => v != null), 0.5), e60n:res.filter(r => r.e60T && r.e60T[0.693] != null).length, f57:pct(res.map(r => r.firstT[57]).filter(v => v != null), 0.5), f59:pct(res.map(r => r.firstT[59]).filter(v => v != null), 0.5)};   // e60: 60강 기대값 0.693기 시각(= 첫 60강 시각의 중앙값, 운을 뺀 값)
 }
 function renderCompare(rows, title){
   const el = document.getElementById('compare'); el.style.display = '';
-  const sorted = rows.slice().sort((a, b) => a.score - b.score);
+  const is60 = rows.some(r => r.e60n > 0), key = r => is60 ? (r.e60n === r.n ? r.e60 : Infinity) : r.score;
+  const sorted = rows.slice().sort((a, b) => key(a) - key(b));
+  if (is60){
+    let h = `<h2>${title} — 같은 시드 ${rows[0].n}판, 「60강 기대 중앙값」 순</h2><p class="note">60강 기대 중앙값 = 59강 도전마다 60강 확률을 더한 기대값이 0.693기가 된 시각의 중앙값(첫 60강 시각의 중앙값과 같은 뜻, 운을 뺀 값). 실제 첫 60강은 운이 커서 따로 적음.</p><div class="scroll"><table><tr><th>전략</th><th>60강 기대 중앙값</th><th>실제 첫 60강 (빠른 · 보통 · 느린)</th><th>미완료</th><th>첫 57강</th><th>첫 59강</th><th>리방</th><th>끝 초월</th></tr>`;
+    sorted.forEach((r, i) => { h += `<tr class="${i === 0 ? 'best' : ''}"><td class="txt">${esc(r.name)}</td><td>${r.e60n === r.n ? fmtH(r.e60) : fmtH(r.e60) + ' (' + r.e60n + '/' + r.n + ')'}</td><td>${fmtH(r.p10)} · ${fmtH(r.p50)} · ${fmtH(r.p90)}</td><td>${r.fail}</td><td>${fmtH(r.f57)}</td><td>${fmtH(r.f59)}</td><td>${r.reb.toFixed(0)}</td><td>${r.ex ? r.ex.toLocaleString() : '-'}</td></tr>`; });
+    h += `</table></div>`; el.innerHTML = h; return;
+  }
   let h = `<h2>${title} — 같은 시드 ${rows[0].n}판, 평균 순 (미완료는 최대 시간의 1.5배로 침)</h2><div class="scroll"><table><tr><th>전략</th><th>평균</th><th>빠른 판</th><th>보통</th><th>느린 판</th><th>미완료</th><th>첫 52강</th><th>첫 54강</th><th>리방</th><th>끝 초월</th></tr>`;
   sorted.forEach((r, i) => { h += `<tr class="${i === 0 ? 'best' : ''}"><td class="txt">${esc(r.name)}</td><td>${fmtH(r.score)}</td><td>${fmtH(r.p10)}</td><td>${fmtH(r.p50)}</td><td>${fmtH(r.p90)}</td><td>${r.fail}</td><td>${fmtH(r.f52)}</td><td>${fmtH(r.f54)}</td><td>${r.reb.toFixed(0)}</td><td>${r.ex ? r.ex.toLocaleString() : '-'}</td></tr>`; });
   h += `</table></div>`;
@@ -3292,21 +3428,16 @@ async function startCompare(){
   setBusy(false);
 }
 // ---------- 자동 전략 찾기 (좌표 하강: 한 항목씩 바꿔 평균이 줄면 채택) ----------
-const SEARCH = [
-  ['gemFirst1', [['hostile:30, accel:5, wealth:20, exp:1000, ultimate:100'],['hostile:20, accel:3, wealth:10, exp:1000'],['exp:1000'],['hostile:20, accel:3, wealth:10']]],
-  ['gemFirst', [['exp:1000, achieve:30, mastery:60'],['exp:1000, achieve:20, mastery:60'],['exp:1000, mastery:60'],['exp:1000']]],
-  ['saleHorizonH', [[0.17],[1],[3],[10]]],
-  ['lowSellEnd', [['f48'],['f47'],['f49'],['auto']]],
-  ['handoffBoost', [[50],[30],[0]]],
-  ['reboot', [['interval:10'],['interval:15'],['interval:30'],['interval:60']]],
-  ['hgMaxStage', [[50],[49],[48]]],
-  ['judgeBias', [[0.3],[1],[3]]],
-  ['pushBias', [[2],[3],[5]]],
-  ['specCoupon', [['on'],['off']]],
-  ['gemEvery', [[600],[1800]]],
-  ['mineSlots', [[0],[6],[12]]]
+const SEARCH = [   // 지금 기본에서 비슷하게 나온 값들만 (2026-10-13)
+  ['sell49PreFrac', [[0.6],[0.8]]],
+  ['sell49FuseFrac', [[0.5],[0.6]]],
+  ['sellH', [[20],[30]]],
+  ['fuseFrom', [['x2500'],['x2700'],['x3000']]],
+  ['rbLateMin', [[1],[1.5],[2]]],
+  ['sell55U', [[0],[14]]],
+  ['orbExpH', [[10],[30]]]
 ];
-function applyChoice(P, key, val){ const o = Object.assign({}, P); if (key === 'reboot' && String(val).startsWith('interval:')){ o.reboot = 'interval'; o.rebootMin = Number(String(val).split(':')[1]); } else o[key] = val; return o; }
+function applyChoice(P, key, val){ const o = Object.assign({}, P); o[key] = val; return o; }
 async function startSearch(){
   let base = readSettings(); saveSettings(base); setBusy(true);
   const status = document.getElementById('status'), el = document.getElementById('compare'); el.style.display = '';
