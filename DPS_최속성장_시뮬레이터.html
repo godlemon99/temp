@@ -1548,8 +1548,8 @@ function climbHi(money, u1, u2, v49, v51, n49, n12){   // n12: 자판기 52강 �
   const pr = i => i >= 0 ? OFFERS_HI[i].price : 0, cost = (a, b) => pr(a) * u1 + pr(b) * u2;
   let bi = 0; for (let i = 0; i < PAIRS_HI.length; i++){ if (cost(PAIRS_HI[i][0], PAIRS_HI[i][1]) <= money) bi = i; else break; }
   const best = PAIRS_HI[bi], bc = cost(best[0], best[1]), nx = PAIRS_HI[bi + 1];
-  // 51/51 ~ 52/52 사이 남는 돈은 다음 칸(같은 값 49강 12기, 52강보다 앞)으로 감 = 단수 — 52강으로 돌리면 첫 60강 +15.1±1.5h(2026-10-14, 특급 171 상태 32판, 단수가 안 올라 53강 칸에 못 닿음)
-  const sw = (i, vi) => { if (n12 && i === I52) return I49x12; if (n49 && i === I49x12) return I52; if (vi !== 1 || i < 0) return i; const o = OFFERS_HI[i]; if (v49 && o.n === 1 && o.lv === 52) return I49x12; if (v51 !== false && o.n === 4 && o.lv === 49) return I51; return i; };   // 자판기 2는 49강 4기 묶음 대신 같은 값(100자) 51강 (사용자 2026-10-13: 51강↑ 생산은 51강, 단수는 49~50강 — 지금 상태 24판 60강 기대 119.7 → 113.7h)
+  // 긴 판(융합·60강 단계)은 몰기(n12) 때 말고는 49강 12기 칸도 52강으로 삼(n49) — 52/52 전 남는 돈을 49강 12기(단수)에 쓰는 경우는 없앰(2026-10-15, 처음부터 48판: 52/52까지 단수 안 함 → 두 대 52강에서 8억 몰기가 예전 기본 대비 첫 60강 −8.0h)
+  const sw = (i, vi) => { if (n12 && i === I52) return I49x12; if (n49 && i === I49x12) return I52; if (vi !== 1 || i < 0) return i; const o = OFFERS_HI[i]; if (v51 !== false && o.n === 4 && o.lv === 49) return I51; return i; };   // 자판기 2는 49강 4기 묶음 대신 같은 값(100자) 51강 (사용자 2026-10-13: 51강↑ 생산은 51강, 단수는 49~50강 — 지금 상태 24판 60강 기대 119.7 → 113.7h)
   const st = {}; const add = (i, r) => { if (i >= 0 && r > 0){ const o = OFFERS_HI[i]; st[o.lv] = (st[o.lv] || 0) + r * o.n; } };
   let mix = null;
   if (nx){ const di = nx[0] !== best[0] ? 0 : 1, from = best[di], to = nx[di], uu = di ? u2 : u1;
@@ -1679,11 +1679,11 @@ const DEFAULTS = {
   // 엑보 줄 하루 해금 (정식 출시 첫날은 25,000타까지, 둘째 날부터 만 → 억 → 조 → 경 → 해 → 자 묶음을 하루에 하나씩, 날짜는 판을 시작한 때 · 매일 18시) · fiDay0H = 출시 몇 시간 뒤에 레벨 1로 시작했는지 · fiSwapAll = 25,000타 뒤에도 더 높은 강이 나오면 엑보 유닛이 바뀜
   fiDaily:'on', fiDay0H:0, fiSwapAll:'on',
   // 목표 첫 60강 (사용자 2026-10-12): 융합으로 57강 → 광산(58·59강은 mine58·mine59기까지 광산에 둠) → 남는 유닛은 팔거나(응무조 → 보주) 위로. sell60 auto = 판매 1기의 응무조로 보주를 사서 sellH시간 동안 늘어나는 60강 기대값이 위로 보낼 때보다 크면 팜
-  goal60:'on', goal60End:'first', mine58:48, mine59:48, sellH:20, room60:'q6', ex8:'on', sell49FuseFrac:0.6, sell49FuseV:0, sell49PreFrac:0.8,
+  goal60:'on', goal60End:'first', mine58:48, mine59:48, sellH:20, room60:'q6', ex8:'on', sell49FuseFrac:0, sell49FuseV:0, sell49PreFrac:0.8,
   // ExPoint
   hot:'on', special:'on', epSpare:'boxNormU', epReserve:20000, spareKeep:0,   // 남는 ExPoint: 행운·경험 +10까지 노말 상자(2026-10-12 2인·T.027 −0.24h), 그 뒤 무조건 모아 둠(광산 — 사용자) · 예전: 모아 둠 (2026-10-07 24판: 크레딧으로 바꿔도 시간 같음 −0.03h, 끝에 EP 약 360만 남음)
   // 판매
-  sell55:'on', sell56:'on', sell55U:14, tSwitchU:20, sell50Force:'post', sell50T:54, sleepAw:'off', sleepOffH:0, sell59H:40, room60Q:4, orbStage:'on', v49Mode:'off', q59Rule:10, aw12:6e8, overflow:'attempt', sell50Rule:'judge', tRule:'judge', judgeBias:0.5, pushBias:3, judgeEvery:600, sell50Frac:1, exReserveH:1, lowSellEnd:'never', lowSellReserve:0, lowSellBias:1, lowSellStart:'', sell49:'on', sell49Force:'preU', statReset:'off', wait25kHand:0,   // 45~48강 판매는 처음 48강이 나오면 끝 (2026-10-06 비교: 판단만보다 0.2h 빠름)
+  sell55:'on', sell56:'on', sell55U:14, tSwitchU:20, sell50Force:'post', sell50T:54, sleepAw:'off', sleepOffH:0, sell59H:40, room60Q:4, orbStage:'on', q59Rule:10, aw12:8e8, midHg:'', overflow:'attempt', sell50Rule:'judge', tRule:'judge', judgeBias:0.5, pushBias:3, judgeEvery:600, sell50Frac:1, exReserveH:1, lowSellEnd:'never', lowSellReserve:0, lowSellBias:1, lowSellStart:'', sell49:'on', sell49Force:'preU', statReset:'off', wait25kHand:0,   // 45~48강 판매는 처음 48강이 나오면 끝 (2026-10-06 비교: 판단만보다 0.2h 빠름)
   // 스탯 · 보석 · 크리스탈
   dpsAtk:'on', gemMode:'auto', gemEvery:600,
   craftOrder:'c2:10, c17:10, c3:10, c8:10, c12:10, c14:10, c18:5, c19:5, c20:20, c18:10, c19:10, c4:10, c13:10',   // 행운(c2, 노말이라 1개 조각 500)을 먼저 +10 — 2인·T.027 48판 무색 먼저보다 우주 +10 −0.15h · 각성(c8) +10 일찍 (1~3칸용) · 흑색·백색 +5까지 만들고 우주, 그 뒤 흑·백 +10 (우주 목표 96판: 60분 판·β 0.03과 함께 −2.7h)
@@ -2014,7 +2014,7 @@ function run(P0, seed, wantLog, init, ext){
     if (added){ const s = R.eq.map(k => CRY_BY[k].name + " +" + cryLv(k)).join(" · "); if (s !== lastEqLog){ L(`크리스탈 장착${R.mode === 'sale' ? ' [판매 판]' : ''} (슬롯 ${R.eq.length}/${slots}): ${s}`); lastEqLog = s; } }
   }
   function refreshC(){ eqLv = {}; R.eq.forEach(k => { eqLv[k] = Math.max(0, cryLv(k)); }); C = cryAgg(eqLv); if (P.discAdd > 0) C = Object.assign({}, C, {disc:Math.min(100, (C.disc || 0) + P.discAdd)}); cryDirty = false; prodDirty = true; }   // discAdd: 판매 할인 %p를 공짜로 더해 봄 (비교용)
-  function spec(){ return {level:A.level, exLv:A.exLv, st:A.st, gems:A.gems, awaken:A.awaken, ex:A.ex, C, hg:R.hg, mine:A.bossHigh >= 5, race:A.race, spec:A.cp.spec > 0, v49:P.v49Mode === 'on' && !!(A.fuseOn || A.condOn), n12:P.aw12 > 0 && !!A.v52seen && !A.aw12Done && !!(A.fuseOn || A.condOn), n49:P.aw12 > 0 && !!A.aw12Done && !!(A.fuseOn || A.condOn), v51:sleepAwMode() < 2, power:A.orb.power, orb:A.orb, multi:multiOn()}; }   // 허수광산은 개인보스 10단계 뒤
+  function spec(){ return {level:A.level, exLv:A.exLv, st:A.st, gems:A.gems, awaken:A.awaken, ex:A.ex, C, hg:R.hg, mine:A.bossHigh >= 5, race:A.race, spec:A.cp.spec > 0, v49:false, n12:P.aw12 > 0 && !!A.v52seen && !A.aw12Done && !!(A.fuseOn || A.condOn), n49:!!(A.fuseOn || A.condOn) && !(A.v52seen && !A.aw12Done), v51:sleepAwMode() < 2, power:A.orb.power, orb:A.orb, multi:multiOn()}; }   // 허수광산은 개인보스 10단계 뒤
   const hotOn = () => A.cp.hot > 0, spOn = () => A.cp.special > 0;
   // 그 판 인원 (멀티): 처음 fiMultiRooms판은 fiMultiN명, 그 뒤 fiMultiN2명 — 엑보 타수 N배 · 2명 이상이면 멀티 보너스 (뽑기 +1 · 51~58강 +0.5%p · 융합 +0.5%p · 57~59강 공업 +3)
   const playersNow = () => { const ri = (init ? (init.rerolls || 0) : 0) + rec.runs - 1; return Math.max(1, (P.fiMultiN > 1 && ri < (P.fiMultiRooms || 0)) ? P.fiMultiN : (P.fiMultiN2 || 1)); };
@@ -2195,13 +2195,13 @@ function run(P0, seed, wantLog, init, ext){
   function fuseFeed(c){
     R.fuseProg += c; rec.fused56 = (rec.fused56 || 0) + c;
     const need = fuseNeed();
-    while (R.fuseProg >= need){
-      R.fuseProg -= need; rec.fuseAtt = (rec.fuseAtt || 0) + 1;
-      if (rnd() >= fusePf() / 100) continue;
-      R.n57++; if (R.n57 > (rec.n57max || 0)) rec.n57max = R.n57;
+    if (R.fuseProg >= need){   // 시도를 한 번에 이항분포로 굴림 (시도마다 굴리던 것과 통계적으로 같고 약 5배 빠름, 2026-10-15)
+      const nA = Math.floor(R.fuseProg / need); R.fuseProg -= nA * need; rec.fuseAtt = (rec.fuseAtt || 0) + nA;
+      const sN = binom(nA, fusePf() / 100); if (sN <= 0) return;
+      R.n57 += sN; if (R.n57 > (rec.n57max || 0)) rec.n57max = R.n57;
       // 57강부터는 unit60이 광산(사냥터 48칸) · 판매 · 위로(58 → 59 → 60강)를 정함 — 목표는 첫 60강 (한 판에 57강 N기 목표는 2026-10-12 사용자 요청으로 없앰)
       if (!A.condOn){ A.condOn = true; rec.condT0 = t; rec.condEx0 = A.exLv; rec.condAw0 = A.awaken; exDirty = true; lastExAlloc = -1e18; L(`60강 단계 시작: 57강을 광산에 채우고 남는 것은 팔거나(응축된 무색 조각 → 보주) 58 → 59 → 60강으로`); }
-      firstMade(57); unit60(57, 1); if (done) return;
+      firstMade(57); unit60(57, sN); if (done) return;
     }
   }
   function processChain(){
@@ -2308,11 +2308,13 @@ function run(P0, seed, wantLog, init, ext){
   let orbAcc = {}, orbLogT = -1e18;
   // 보주 단계(orbStage, 2026-10-14): 57강을 파는 동안 특급·고급은 수입을 안 늘림(58·59강 도전 때부터 쓰임) → 특급은 상급 100 뒤(첫 58강 전까지), 고급·경험은 특급 500 · 지위 500 뒤에 삼.
   //   판매 판단(R.orbSc)은 그대로 모든 보주로 잼. 초월 2,340 상태 48판 −4.35±0.55h · 초월 1,816 상태 32판 −3.81±0.72h
-  // v49Mode(2026-10-14): 'on'이면 융합·60강 단계에 자판기 2가 52강 대신 같은 값 49강 12기(단수) — 끄는 게 빠름(초월 2,572 · 57강 48기 상태 32판 −6.9±2.2h, 몇 판은 켜면 크게 막힘 · 초월 1,816 상태 32판 −1.6±0.8h), 사용자도 「이제 단수는 하지 말고」
+  // 몰기 시작: 두 대가 (거의) 다 52강을 살 때 — 52/52 전엔 49강 12기 칸도 52강이라, 자판기 2가 그 칸이고 자판기 1이 그 칸으로 98% 넘게 넘어갔으면 52/52로 봄(정식 문턱 바로 아래에서 돈이 멈춰 몰기가 몇 시간씩 안 오던 것 고침). 정식 52/52까지 기다리면 첫 60강 +1.5h(2026-10-15, 48판)
+  const v52now = v => (v.a >= 52 && v.b >= 52) || (v.b === 49.12 && (v.a === 49.12 || (v.a === 51 && !!v.mix && v.mix.r >= 0.98)));
   const orbHeld = k => P.orbStage !== 'off' && ((k === 'sp' && A.orb.high < 100 && rec.firstT[58] === undefined) || ((k === 'pr' || k === 'exp') && !(A.orb.sp >= 500 && A.orb.status >= 500)));
   function buyOrbs(){
-    // aw12(2026-10-14): 융합·60강 단계에서 처음 52/52가 되면 자판기 둘 다 49강 12기로 단수를 aw12까지 몬 뒤, 그 뒤로는 단수 안 함(남는 돈도 52·53강)
-    if (P.aw12 > 0 && (A.fuseOn || A.condOn)){ if (!A.v52seen && prod && prod.vend && prod.vend.a >= 52 && prod.vend.b >= 52){ A.v52seen = true; L(`자판기 52/52 → 단수 몰기 시작 (49강 12기 두 대, 목표 ${fmtN(P.aw12)})`); prodDirty = true; } if (A.v52seen && !A.aw12Done && A.awaken >= P.aw12){ A.aw12Done = true; L(`단수 ${fmtN(A.awaken)} → 몰기 끝, 이제 단수 안 함`); prodDirty = true; } }
+    // aw12(2026-10-15): 긴 판은 52/52까지 단수 안 함(49강 0% · 남는 돈 52강) → 두 대가 52강을 사면 둘 다 49강 12기로 단수를 aw12(기본 8억)까지 몰고(그동안 49강 전부 판매), 그 뒤로는 단수 안 함(남는 돈은 52·53강)
+    //   처음부터 48판(예전 기본 대비 첫 60강): 6억 −4.4 · 8억 −8.0 · 정식 52/52에 6억 −6.5. 지금 상태(5.89억 · 특급 390 · 지위 178)에서는 6.5~8억이 같고 7.5억이 가장 빠름(96판)
+    if (P.aw12 > 0 && (A.fuseOn || A.condOn)){ if (!A.v52seen && prod && prod.vend && v52now(prod.vend)){ A.v52seen = true; L(`자판기 52/52 → 단수 몰기 시작 (49강 12기 두 대, 목표 ${fmtN(P.aw12)})`); prodDirty = true; } if (A.v52seen && !A.aw12Done && A.awaken >= P.aw12){ A.aw12Done = true; L(`단수 ${fmtN(A.awaken)} → 몰기 끝, 이제 단수 안 함`); prodDirty = true; } }
     if (!A.condOn || (!(A.cs >= 2) && P.goal60 !== 'on')) return;   // 목표 60강: 응무조가 없어도 한계효율(R.orbSc)은 잼
     const S = spec(); let bought = false; const nAlt = S.n12; S.n12 = false;   // 보주 효율은 몰기 안 할 때(52강) 기준으로 잼 — 몰기 중 n50eq로 재면 지위 등이 쓸모없게 보여 멈춤
     {
@@ -2554,6 +2556,12 @@ function run(P0, seed, wantLog, init, ext){
     L(`리방 ${rec.reboots}회 — 판 ${fmtSec(t - R.t0)} (DPS 보상 ${R.dpsIdx}단계, 엑보 ${R.fiStage === 2 ? '25,000' : R.fiStage === 1 ? '5,000' : '0'}타, 광산 칸 ${mineCount()})`);
     // 다음 판 엑보 목표 = 이번 판에서 fiWait초 안에 나온 가장 좋은 단계
     { let rk = 0; for (const k in R.tierT){ if (R.tierT[k] - R.t0 <= P.fiWait){ const r = +k >= 51 ? 6 : FI_TIERS.indexOf(+k); if (r > rk) rk = r; } } rec.fiNextRank = rk; }
+    // 리방 전 사냥터·광산 유닛 판매(2026-10-15): 45~50강 뽑기 · 52~56강 판매 · 57~59강 응무조 판매를 크레딧 되는 만큼 (첫 리방부터) — 처음부터 24판 −1.2h, 긴 판 단수 안 함 흐름 −2.2h
+    if (R.ready){ exGainStep = 0;
+      for (let s = 45; s <= 50; s++){ const n = Math.floor(R.hg[s] || 0), c = LOW_SELL_CR * (1 - C.disc / 100), k = c > 0 ? Math.min(n, Math.floor(A.credits / c)) : n; if (k > 0) sellGacha(s, k); }
+      for (let s = 52; s <= 56; s++){ const n = Math.floor(R.hg[s] || 0), k = Math.min(n, Math.floor(A.credits / EX_SELL_CR)); if (k > 0) sellEx(s, k); }
+      for (let s = 57; s <= 59; s++){ const n = Math.floor(R.hg[s] || 0); if (n > 0) condSell(s, n); }
+      if (exGainStep > 0){ A.exCum += exGainStep * xMul(); exGainStep = 0; while (A.exCum >= F(A.exLv)){ A.exLv++; A.expts += 30; exDirty = true; } } awaken(); }
     const dt = P.rebootSec; for (const k in A.cp) A.cp[k] = Math.max(0, A.cp[k] - dt);
     if (P.bossPerRoom === 'on') A.bossHigh = 0;   // 개인보스 6~10·허수광산도 판마다 다시 (보상도 다시)
     t += dt; newRun();
@@ -2673,7 +2681,7 @@ function run(P0, seed, wantLog, init, ext){
     if (P.sell50T > 0 && T >= P.sell50T) return 0;   // 판매 강이 54강↑이면 50강 안 팜 — 55·56강 판매로 바꾸면 크레딧이 남아 판단이 50강을 다 팔아(도전 가치를 초월 EXP로만 잼) 54강↑이 끊겼음 (2026-10-13)
     switch (P.sell50Force){ case 'sleep': return aw ? null : 1; case 'pre': return cryLv('c20') < P.tSwitchU ? 1 : null; case 'post': return cryLv('c20') >= P.tSwitchU ? 1 : null; default: return String(P.sell50Force).slice(0, 2) === 'aw' && A.awaken < +String(P.sell50Force).slice(2) ? 1 : null; } }   // 'aw100000' = 단수 10만이 될 때까지 늘 판매
   // sell49Force: 49강 판매 구간 — preU = 우주 +tSwitchU 전까지 sell49PreFrac만큼, 그 뒤 판단(기본) · awN = 단수 N까지 늘(그 뒤 판단) · f51 = 첫 51강까지 늘(그 뒤 판단)
-  function force49(){ if (sleepAwMode() >= 1) return 1; if (fuseActive()){ if (P.sell49FuseV > 0 && !(prod && prod.vend && prod.vend.a >= P.sell49FuseV && prod.vend.b >= P.sell49FuseV)) return 0; return Math.max(0, Math.min(1, P.sell49FuseFrac)); }   // sell49FuseV: 자판기 두 대가 N강을 살 때까지 융합 중 49강 안 팜(단수 멈춤)   // 융합 중엔 49강 안 팜(기본) — 크레딧이 넉넉하면 49강을 다 팔아 50·56강이 끊김 (2026-10-13)
+  function force49(){ if (sleepAwMode() >= 1) return 1; if (fuseActive()){ if (P.sell49FuseV > 0 && !(prod && prod.vend && prod.vend.a >= P.sell49FuseV && prod.vend.b >= P.sell49FuseV)) return 0; if (A.v52seen && !A.aw12Done) return 1; return Math.max(0, Math.min(1, P.sell49FuseFrac)); }   // sell49FuseV: 자판기 두 대가 N강을 살 때까지 융합 중 49강 안 팜(단수 멈춤)   // 융합 중엔 49강 안 팜(기본) — 크레딧이 넉넉하면 49강을 다 팔아 50·56강이 끊김 (2026-10-13)
     const m = String(P.sell49Force || 'preU'); if (m === 'preU') return cryLv('c20') < P.tSwitchU ? Math.max(0, Math.min(1, P.sell49PreFrac)) : null; if (m === 'f51') return rec.firstT[51] === undefined ? 1 : null;
     if (m.slice(0, 2) === 'aw') return A.awaken < parseFloat(m.slice(2)) ? 1 : null; return null; }
   function judge(){
@@ -2712,6 +2720,11 @@ function run(P0, seed, wantLog, init, ext){
 
   // ---------- 진행 ----------
   if (init) runFromInit(); else newRun();
+  // 진행 중인 긴 판에서 시작(midHg, 지정 스펙 · 2026-10-15): 광산 유닛(예 '58:48')을 채운 채로 융합·60강 단계가 켜진 판에서 시작 (판은 24시간 전에 열렸다고 봄 — 판 첫 달성·DPS·엑보 보상은 이미 받음)
+  if (!init && String(P.midHg || '').trim()){ const mh = parseList(P.midHg, Object.fromEntries(Array.from({length:61}, (_, i) => [String(i), 1]))); const top = Math.max(57, ...mh.map(([k]) => +k));
+    R.t0 = t - 24 * 3600; runReady(); mh.forEach(([k, v]) => { R.hg[+k] = Math.round(v || 0); }); for (let s = 20; s <= top; s++) R.reached[s] = 1; R.dpsIdx = DPS_REW.length; R.fiStage = 2; R.fiLine = R.fiMaxIdx;
+    A.fuseOn = true; A.condOn = true; A.fuseResetPending = false; R.forceReboot = false; rec.fuseStartT = t; rec.condT0 = t; rec.condEx0 = A.exLv; rec.condAw0 = A.awaken; for (let s = 51; s <= top; s++) rec.firstT[s] = t;
+    pushT = true; prodDirty = true; exDirty = true; lastExAlloc = -1e18; L(`진행 중인 긴 판에서 시작: 광산 ${P.midHg}`); }
   const maxT = (init ? 0 : Math.max(0, P.t0H || 0) * 3600) + P.maxHours * 3600, samples = [];   // 지정 스펙이면 시작 시각부터 maxHours
   let nextSample = t, exAt = {1:1, 10:1, 30:1, 100:1, 300:1, 1000:1, 3000:1};
   while (t < maxT && !done){
@@ -2918,7 +2931,7 @@ const FIELDS = [
     ['mineFill','광산 채우기 (54강 판매 중)','select','판마다 광산이 이 강 이상 48기가 될 때까지 54(·55)강을 안 팔고 위로, 그 뒤 54강 판매. 기본 56 · 우주 +10부터 — 2인·T.027 48판(첫 60강 / 우주 +13): 안 함 255h / 14.2h · 55강 우주 +10부터 248h / 12.3h · 56강 우주 +10부터 249h / 11.7h · 56강 초월 1,000부터 250h / 14.2h · 판을 8분으로 늘리면 269~273h / 21~22h(손해)',[['56','56강까지'],['55','55강까지']]],
     ['mineFillU','광산 채우기: 우주 +N부터','int','기본 10'],
     ['mineFillEx','광산 채우기: 초월 레벨 N부터','int','기본 0'],
-    ['sell49FuseFrac','융합 중 49강 판매 비율','num','0~1, 기본 0.6 (지금 흐름 초월 1,346 시작 24판: 20% 123.1h · 40% 111.9 · 50% 108.2 · 60% 106.5 · 70% 111.1 · 80% 117.0 · 100% 158 — 자판기 2가 51강을 사서 49강이 적게 들어오니 예전 40%보다 많이 팖. 그 전 비교 sellH 10, 60강 기대 0.693 시각: 0% 179h · 20% 164h · 40% 150h · 80% 158h · 100% 57강 안 나옴 · 자판기 51/51까지 멈춤 뒤 80% 150h)'],
+    ['sell49FuseFrac','융합 중 49강 판매 비율','num','0~1, 기본 0 — 긴 판은 52/52까지 단수 안 함, 두 대가 52강을 사면 49강 12기 두 대로 몰기(그때만 49강 전부 판매, 목표 aw12 8억). 처음부터 48판: 예전 기본(60% · 52/52 전 남는 돈 49강 12기 · 6억 몰기) 대비 첫 60강 −8.0h. 예전 비교 (예전 기본 0.6, 지금 흐름 초월 1,346 시작 24판: 20% 123.1h · 40% 111.9 · 50% 108.2 · 60% 106.5 · 70% 111.1 · 80% 117.0 · 100% 158 — 자판기 2가 51강을 사서 49강이 적게 들어오니 예전 40%보다 많이 팖. 그 전 비교 sellH 10, 60강 기대 0.693 시각: 0% 179h · 20% 164h · 40% 150h · 80% 158h · 100% 57강 안 나옴 · 자판기 51/51까지 멈춤 뒤 80% 150h)'],
     ['sell49FuseV','융합 중 자판기 두 대가 N강을 살 때까지 49강 안 팜','int','0 = 안 씀. 51이면 자판기 51/51 전까지 단수 멈춤 (지금 흐름 60%에서 109.4h vs 106.5h로 약간 손해, 예전엔 40%와 같았음)'],
     ['sell49PreFrac','54강 판매 구간 49강 판매 비율','num','0~1, 기본 0.8(새 후반 빌드와 함께 60강 기대 0.693 시각: 지금 상태 0.4 154h · 0.6 150h · 0.8 146h, 처음부터 0.6 166h · 0.8 159h. 그 전 비교 — 초월 813 · 우주 +12 · 흑백 16 · 단수 1.25억 시작 24판, 우주 +14부터 55·56강 판매와 함께: 0.4 191/195h · 0.6 184/193h · 0.8 187/186h — 첫 60강은 같고 0.6이 초월 69h 3,201 · 우주 +17 43h로 0.8(2,499 · 123h)보다 앞섬, 단수는 6.3억 vs 7.1억) — 「49강 판매 구간」이 우주 +N 전까지 늘일 때 49강을 이 비율만 팖. 1(전부)이면 크레딧이 넉넉해지는 우주 +14쯤부터 50강이 안 나와 54강 판매·초월이 멈춤. 2인·T.027 48판 첫 60강 중앙 약 237 → 205h, 우주 +15 190 → 28h (초월 353 · 단수 1.2억 시작 24판: 0.6 207h · 0.8 199h · 0.95 207h · 전부 238h · 판단대로 245h)'],
     ['fiDaily','엑보 줄 하루 해금','select','정식 출시 첫날은 25,000타까지, 둘째 날부터 만 → 억 → 조 → 경 → 해 → 자 묶음을 하루에 하나씩(판을 시작한 날 기준, 매일 18시, 7일째에 자 묶음까지 다 열림). 끄면 공개 테스트처럼 25,000타에서 멈춤',[['on','켬 (정식)'],['off','끔 (25,000타까지)']]],
@@ -3065,7 +3078,8 @@ const FIELDS = [
     ['orbs0','보주 (키:개수)','text','low 하급 · mid 중급 · high 상급 · sp 특급 · pr 고급 · exp 경험 · save 절약 · power 힘 · status 지위 · might 권력 · mine 채광 · divine 신위 · crit 절명 · glut 폭식 · eon 영겁 · fate 명운 · nebula 성운 · heaven 천운 · void 무위'],
     ['st0','일반 스탯 (키:레벨)','text','빈칸 = 레벨 포인트로 자동(시간당 50강 최적). 적으면 그대로 두고 남는 포인트만 자동. 키: 1_1 돈 · 1_2 공업 · 1_3 +1확률 · 1_4 +2확률 · 1_5 +3확률 · 1_6 특수확률 · 2_1~2_6 · 3_1~3_5 44~48강 · 3_6 촉진 · 4_1 LV.MAX 무조. 예: 1_3:100, 1_2:100, 3_6:300'],
     ['ex0','초월 스탯 (키:Lv)','text','빈칸 = 효율대로 자동. 적으면 그대로 두고 남는 포인트만 자동. 키: 5_1 초월확률 · 5_2~5_6 51~55강 · 6_1~6_6 51~56강 공업 · 7_1 54강2 · 7_2 55강2 · 7_3 융합 · 7_4 57강 · 7_5 58강 · 7_6 응무조 · 8_1·8_2 자판기 촉진 · 8_3 광산 채취효율'],
-    ['cry0','크리스탈 (키:강)','text','가진 크리스탈 강. 예: c20:10, c18:10, c19:10, c17:10, c3:10 (코드는 「뒤 단계 스탯 · 보석 · 크리스탈」의 제작 순서 설명 참고)'],]},
+    ['cry0','크리스탈 (키:강)','text','가진 크리스탈 강. 예: c20:10, c18:10, c19:10, c17:10, c3:10 (코드는 「뒤 단계 스탯 · 보석 · 크리스탈」의 제작 순서 설명 참고)'],
+    ['midHg','진행 중인 긴 판 (광산 유닛 키:개수)','text','빈칸 = 새 판을 여는 것부터. 적으면 그 유닛이 광산에 찬 채로 융합·60강 단계가 진행 중인 긴 판에서 시작(판 첫 달성·DPS·엑보 보상은 이미 받음). 예: 58:48 (58강 48기), 57:20, 58:28'],]},
 ];
 
 const RUN_EXPLAIN = `<div class="explain"><b>판 수 · 시드</b>: 강화와 뽑기는 운이라 여러 번 돌려 <b>빠른 판(상위 10%) · 보통(중앙값) · 느린 판(하위 10%)</b>을 봅니다. 시드가 같으면 주사위가 똑같이 굴러가서, 설정만 바꿔 다시 돌리면 차이는 전략 차이입니다. 한 판이 수백~수천 시간이라 24판에 수십 초 걸릴 수 있습니다.</div>`;
