@@ -1679,7 +1679,7 @@ const DEFAULTS = {
   // 엑보 줄 하루 해금 (정식 출시 첫날은 25,000타까지, 둘째 날부터 만 → 억 → 조 → 경 → 해 → 자 묶음을 하루에 하나씩, 날짜는 판을 시작한 때 · 매일 18시) · fiDay0H = 출시 몇 시간 뒤에 레벨 1로 시작했는지 · fiSwapAll = 25,000타 뒤에도 더 높은 강이 나오면 엑보 유닛이 바뀜
   fiDaily:'on', fiDay0H:0, fiSwapAll:'on',
   // 목표 첫 60강 (사용자 2026-10-12): 융합으로 57강 → 광산(58·59강은 mine58·mine59기까지 광산에 둠) → 남는 유닛은 팔거나(응무조 → 보주) 위로. sell60 auto = 판매 1기의 응무조로 보주를 사서 sellH시간 동안 늘어나는 60강 기대값이 위로 보낼 때보다 크면 팜
-  goal60:'on', goal60End:'first', mine58:48, mine59:48, sellH:20, room60:'q6', ex8:'on', sell49FuseFrac:0, sell49FuseV:0, sell49PreFrac:0.8,
+  goal60:'on', goal60End:'first', mine58:48, mine59:48, sellH:20, room60:'q6', ex8:'on', sell49FuseFrac:0, sell49FuseV:0, sell49PreFrac:0.8, discEqU:10, discEqAw:1e8, sell49DiscFrac:0.7,
   // ExPoint
   hot:'on', special:'on', epSpare:'boxNormU', epReserve:20000, spareKeep:0,   // 남는 ExPoint: 행운·경험 +10까지 노말 상자(2026-10-12 2인·T.027 −0.24h), 그 뒤 무조건 모아 둠(광산 — 사용자) · 예전: 모아 둠 (2026-10-07 24판: 크레딧으로 바꿔도 시간 같음 −0.03h, 끝에 EP 약 360만 남음)
   // 판매
@@ -2010,7 +2010,10 @@ function run(P0, seed, wantLog, init, ext){
   function equipFill(){
     const slots = slotsOf(A.exLv);
     let added = false;
-    for (const k of (R.mode === 'sale' ? P.eqSleepArr : (P.eqSlotMap[slots] || []).concat(P.eqArr))){ if (R.eq.length >= slots) break; if (R.eq.includes(k) || cryLv(k) < 1) continue; R.eq.push(k); added = true; cryDirty = true; }
+    // 판매 할인 크리스탈(2026-10-15): 융합 전 우주 +discEqU(10)부터 단수 discEqAw(1억, 촉진 상한)까지 판은 할인 크리스탈(eqSleepOrder: 우주·흑·절약·주황·보라·백…)로 49강 판매를 공짜로 — 기본 크리스탈이면 이 구간 49강 판매가 크레딧(54강 판매 몫을 남겨 둠)에 막혀 원하는 양의 약 1/8만 팔림. 49강은 이 구간만 sell49DiscFrac(70%).
+    //   처음부터 48판: 할인 70% −3.2±0.5h(단수 1억 15 → 11h, 융합 30.4 → 27.6h) · 80% −2.2 · 60% −2.0 · 2억까지 −1.7 · 융합까지 −1.3 · 우주 8부터 −1.6 · 0.5억까지 +0.6 · 그 구간 49강 100% +3.4(위로 가는 유닛이 없어 초월이 238에서 멈춤) · 번갈아(할인 판 49강만 ↔ 기본 판 54강만) +2.6
+    const discNow = P.discEqAw > 0 && !A.fuseOn && !A.condOn && cryLv('c20') >= P.discEqU && A.awaken < P.discEqAw;
+    for (const k of ((R.mode === 'sale' || discNow) ? P.eqSleepArr : (P.eqSlotMap[slots] || []).concat(P.eqArr))){ if (R.eq.length >= slots) break; if (R.eq.includes(k) || cryLv(k) < 1) continue; R.eq.push(k); added = true; cryDirty = true; }
     if (added){ const s = R.eq.map(k => CRY_BY[k].name + " +" + cryLv(k)).join(" · "); if (s !== lastEqLog){ L(`크리스탈 장착${R.mode === 'sale' ? ' [판매 판]' : ''} (슬롯 ${R.eq.length}/${slots}): ${s}`); lastEqLog = s; } }
   }
   function refreshC(){ eqLv = {}; R.eq.forEach(k => { eqLv[k] = Math.max(0, cryLv(k)); }); C = cryAgg(eqLv); if (P.discAdd > 0) C = Object.assign({}, C, {disc:Math.min(100, (C.disc || 0) + P.discAdd)}); cryDirty = false; prodDirty = true; }   // discAdd: 판매 할인 %p를 공짜로 더해 봄 (비교용)
@@ -2685,6 +2688,7 @@ function run(P0, seed, wantLog, init, ext){
     switch (P.sell50Force){ case 'sleep': return aw ? null : 1; case 'pre': return cryLv('c20') < P.tSwitchU ? 1 : null; case 'post': return cryLv('c20') >= P.tSwitchU ? 1 : null; default: return String(P.sell50Force).slice(0, 2) === 'aw' && A.awaken < +String(P.sell50Force).slice(2) ? 1 : null; } }   // 'aw100000' = 단수 10만이 될 때까지 늘 판매
   // sell49Force: 49강 판매 구간 — preU = 우주 +tSwitchU 전까지 sell49PreFrac만큼, 그 뒤 판단(기본) · awN = 단수 N까지 늘(그 뒤 판단) · f51 = 첫 51강까지 늘(그 뒤 판단)
   function force49(){ if (sleepAwMode() >= 1) return 1; if (fuseActive()){ if (P.sell49FuseV > 0 && !(prod && prod.vend && prod.vend.a >= P.sell49FuseV && prod.vend.b >= P.sell49FuseV)) return 0; if (A.v52seen && !A.aw12Done) return 1; return Math.max(0, Math.min(1, P.sell49FuseFrac)); }   // sell49FuseV: 자판기 두 대가 N강을 살 때까지 융합 중 49강 안 팜(단수 멈춤)   // 융합 중엔 49강 안 팜(기본) — 크레딧이 넉넉하면 49강을 다 팔아 50·56강이 끊김 (2026-10-13)
+    if (P.discEqAw > 0 && cryLv('c20') >= P.discEqU && A.awaken < P.discEqAw) return Math.max(0, Math.min(1, P.sell49DiscFrac));   // 할인 크리스탈 구간(우주 +10 ~ 단수 1억)은 49강 70%
     const m = String(P.sell49Force || 'preU'); if (m === 'preU') return cryLv('c20') < P.tSwitchU ? Math.max(0, Math.min(1, P.sell49PreFrac)) : null; if (m === 'f51') return rec.firstT[51] === undefined ? 1 : null;
     if (m.slice(0, 2) === 'aw') return A.awaken < parseFloat(m.slice(2)) ? 1 : null; return null; }
   function judge(){
@@ -3043,7 +3047,7 @@ const FIELDS = [
     ['mineFrom','광산 포인트 사기 시작','select','초월 353 · 단수 1.2억 시작 24판: 처음부터 첫 60강 중앙 189h · 융합 뒤부터 189h · 아예 안 삼 188h — 크레딧이 8시간쯤부터 남아돌아 광산 크레딧이 안 쓰임',[['start','처음부터 (기본)'],['fuse','융합(57강 긴 판) 시작 뒤부터 — 그 전엔 ExPoint 모음']]],
     ['sleepH','하루 중 자리 비우는 시간 (시간)','num','0 = 계속 플레이'],
     ['sleepRoom','자리 비울 때 (잠방)','select','sale = 자리를 비우기 시작하면 판매 할인 크리스탈로 새 판을 열고 깰 때까지 (45~50강 판매가 할인 — 우주 +10 50% · 흑색 +12 24% · 절약·주황·보라 각 10%면 100%). 초월 352 · 우주 +10에서 8시간: 깰 때 단수 1.2억 → 1.8억 · 무조 ×15 · 초월 +52 · 우주·54강 판매 같음. 처음부터 하루 8시간 48판 첫 60강은 비슷(263h → 266h ±4)',[['sale','판매 할인 크리스탈로 잠방 (기본)'],['normal','그대로']]],
-    ['eqSleepOrder','잠방 크리스탈 (먼저 낌)','text','기본 우주·흑색·절약·주황·보라 → 백색·남색·무색']]},
+    ['eqSleepOrder','잠방 · 할인 크리스탈 (먼저 낌)','text','기본 우주·흑색·절약·주황·보라 → 백색·남색·무색. 잠방 판매 판과, 융합 전 우주 +10 ~ 단수 1억 판(49강 판매 공짜 → 49강 70%)에 낌']]},
   {g:'뒤 단계 ExPoint', items:[
     ['hot','핫타임 쿠폰 (100 EP/시간)','select','',[['on','항상 켬'],['off','안 씀']]],
     ['special','특별 핫타임 (1만 EP/시간)','select','',[['on','남는 EP로 켬'],['off','안 씀']]],
