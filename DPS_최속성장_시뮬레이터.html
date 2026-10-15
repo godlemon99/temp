@@ -1679,7 +1679,7 @@ const DEFAULTS = {
   // 엑보 줄 하루 해금 (정식 출시 첫날은 25,000타까지, 둘째 날부터 만 → 억 → 조 → 경 → 해 → 자 묶음을 하루에 하나씩, 날짜는 판을 시작한 때 · 매일 18시) · fiDay0H = 출시 몇 시간 뒤에 레벨 1로 시작했는지 · fiSwapAll = 25,000타 뒤에도 더 높은 강이 나오면 엑보 유닛이 바뀜
   fiDaily:'on', fiDay0H:0, fiSwapAll:'on',
   // 목표 첫 60강 (사용자 2026-10-12): 융합으로 57강 → 광산(58·59강은 mine58·mine59기까지 광산에 둠) → 남는 유닛은 팔거나(응무조 → 보주) 위로. sell60 auto = 판매 1기의 응무조로 보주를 사서 sellH시간 동안 늘어나는 60강 기대값이 위로 보낼 때보다 크면 팜
-  goal60:'on', goal60End:'first', mine58:48, mine59:48, sellH:20, room60:'q6', ex8:'on', sell49FuseFrac:0, sell49FuseV:0, sell49PreFrac:0.8, discEqU:10, discEqAw:1e8, sell49DiscFrac:0.7,
+  goal60:'on', goal60End:'first', mine58:48, mine59:48, sellH:20, room60:'q6', ex8:'on', sell49FuseFrac:0, sell56Per:10, sell56On:5, sell49FuseV:0, sell49PreFrac:0.8, discEqU:10, discEqAw:1e8, sell49DiscFrac:0.7,
   // ExPoint
   hot:'on', special:'on', epSpare:'boxNormU', epReserve:20000, spareKeep:0,   // 남는 ExPoint: 행운·경험 +10까지 노말 상자(2026-10-12 2인·T.027 −0.24h), 그 뒤 무조건 모아 둠(광산 — 사용자) · 예전: 모아 둠 (2026-10-07 24판: 크레딧으로 바꿔도 시간 같음 −0.03h, 끝에 EP 약 360만 남음)
   // 판매
@@ -2207,6 +2207,11 @@ function run(P0, seed, wantLog, init, ext){
       firstMade(57); unit60(57, sN); if (done) return;
     }
   }
+  // 56강 주기 판매(sell56Per · sell56On, 2026-10-15, 사용자 제안): 특급 500 · 절약 1,000 · 경험 1,000 뒤 ~ 58→59가 9.375%(59강 도전)가 되기 전까지 sell56Per분마다 sell56On분 동안 56강을 전부 융합 대신 팔아 초월 EXP → 7-2 · 7-4(57→58). 크레딧 10억은 57~59강 판매 몫으로 남김.
+  //   처음부터 48판(계속 비율로 판 것): 20% −1.8 · 30% −2.0 · 40% −2.2 · 50% −2.48±0.33h · 60% −2.3 · 70% 이상 무너짐(융합이 굶고 크레딧이 바닥나 58강을 못 팖) · 59강 뒤에도 계속 팔면 +15.6h · 특급 · 절약 뒤부터 −1.35 · 첫 58강부터 −1.09 · 같은 판매에 7-5를 찍으면 30% −1.15
+  //   지금 상태(7-5 11 · 초월 3,567) 96판: 주기는 상관없음(2분마다 1분 −2.00 · 10분마다 5분 −2.12 · 30분마다 15분 −2.10 · 60분마다 30분 −1.97 · 계속 50% −2.13) · 10분마다 3분 −1.74 · 7분 −2.42
+  function sell56Now(){ return P.sell56On > 0 && P.sell56Per > 0 && A.orb.exp >= 1000 && A.orb.sp >= 500 && A.orb.save >= 1000 && p5759()[58] < COND_BASE[58] / COND_BASE[59]; }
+  function sell56Window(){ if (A.s56T0 === undefined) A.s56T0 = t; return ((t - A.s56T0) % (P.sell56Per * 60)) < P.sell56On * 60; }   // 판매를 처음 시작한 때부터 sell56Per분 주기, 앞의 sell56On분 동안 판매
   function processChain(){
     const p = probs();
     for (let pass = 0; pass < 200; pass++){
@@ -2215,7 +2220,7 @@ function run(P0, seed, wantLog, init, ext){
         let c = cnt[s]; if (!c) continue; any = true; cnt[s] = 0;
         firstClear(s);   // 목표 판 수 세기도 여기서
         c -= placeMine(s, c);
-        if (s === 56){ if (c > 0 && fuseActive()){ fuseFeed(c); continue; } if (c > 0){ const k = Math.min(c, Math.floor(A.credits / EX_SELL_CR)); if (k > 0) sellEx(56, k); } continue; }
+        if (s === 56){ if (c > 0 && fuseActive() && sell56Now() && sell56Window()){ const k = Math.min(c, Math.floor(Math.max(0, A.credits - 1e9) / EX_SELL_CR)); if (k > 0){ sellEx(56, k); c -= k; } } if (c > 0 && fuseActive()){ fuseFeed(c); continue; } if (c > 0){ const k = Math.min(c, Math.floor(A.credits / EX_SELL_CR)); if (k > 0) sellEx(56, k); } continue; }
         if (c <= 0) continue;
         const fpTo = P.firstPushTo >= 56 ? 56 : 55, fpNow = (s === 54 || (s === 55 && fpTo >= 56)) && firstPushOn() && !R.reached[fpTo];
         const fillTo = mineFillOn() ? (P.mineFill >= 56 ? 56 : 55) : 0, fillNow = fillTo > 0 && (s === 54 || (s === 55 && fillTo >= 56)) && mineHigh(fillTo) < mineSlotsNow();   // 광산 채우기: 광산이 fillTo강↑ 48기가 될 때까지 54·55강을 안 팔고 위로   // 첫 달성 밀기: 이 판 첫 56강 전까지 54·55강을 안 팔고 위로 (55·56강 첫 달성 크레딧)
@@ -2284,6 +2289,7 @@ function run(P0, seed, wantLog, init, ext){
     const q = p5759(), got = COND_BASE[lv] * condPct() / 100, f = lv === 57 ? 1 : lv === 58 ? q[57] : q[57] * q[58];
     const H = lv === 59 && P.sell59H >= 0 ? P.sell59H : P.sellH;   // sell59H(시험): 59강만 따로 (0 = 59강 안 팜)
     const rate = lv === 59 ? Math.max(1, A.r59p || 0) : f * Math.max(1, A.r57 || 0);   // 59강: 실제로 60강에 도전하는 59강 시간당(A.r59p) — 예전엔 57강 유입 × q57·q58(= 59강 전체 생산)이라 59강을 거의 다 팔고 있어도 판매 이득을 크게 잡아 폭주(길운 2026-10-13: 59강 208만 기 판매)
+    if (lv === 58) return q[58] * COND_BASE[59] > COND_BASE[58] ? 0 : k;   // 58강: 59강에서 팔면 응무조가 더 많을 때(58→59 9.375% 넘음)만 위로, 그 전엔 판매 — 57강 유입이 줄어도(56강 판매 중) 58강을 일찍 올리지 않게 (평소 흐름에선 예전 판단과 판마다 같음)
     if (!((R.orbSc || 0) * got * rate * H > 1)) return 0;
     if (lv < 59 && q[lv] * COND_BASE[lv + 1] > COND_BASE[lv]) return 0;   // 한 단계 위에서 팔면 응무조가 더 많으면 위로 (사용자 2026-10-13: 58강으로 광산 채우고 57이든 58이든 파는 게 나음)
     return k;
@@ -2940,6 +2946,8 @@ const FIELDS = [
     ['mineFillU','광산 채우기: 우주 +N부터','int','기본 10'],
     ['mineFillEx','광산 채우기: 초월 레벨 N부터','int','기본 0'],
     ['sell49FuseFrac','융합 중 49강 판매 비율','num','0~1, 기본 0 — 긴 판은 52/52까지 단수 안 함, 두 대가 52강을 사면 49강 12기 두 대로 몰기(그때만 49강 전부 판매, 목표 aw12 8억). 처음부터 48판: 예전 기본(60% · 52/52 전 남는 돈 49강 12기 · 6억 몰기) 대비 첫 60강 −8.0h. 예전 비교 (예전 기본 0.6, 지금 흐름 초월 1,346 시작 24판: 20% 123.1h · 40% 111.9 · 50% 108.2 · 60% 106.5 · 70% 111.1 · 80% 117.0 · 100% 158 — 자판기 2가 51강을 사서 49강이 적게 들어오니 예전 40%보다 많이 팖. 그 전 비교 sellH 10, 60강 기대 0.693 시각: 0% 179h · 20% 164h · 40% 150h · 80% 158h · 100% 57강 안 나옴 · 자판기 51/51까지 멈춤 뒤 80% 150h)'],
+    ['sell56Per','경험 1,000 뒤 56강 판매 주기 (분)','num','특급 500 · 절약 1,000 · 경험 1,000 뒤부터 58→59가 9.375%(59강 도전)가 될 때까지 이 주기마다 아래 시간 동안 56강을 전부 융합 대신 팔아 초월 EXP(→ 7-2 · 7-4). 기본 10분 — 주기는 2~60분 다 같음'],
+    ['sell56On','  그중 판매 시간 (분)','num','기본 5분(판매 시간 50%), 0 = 안 팜. 크레딧 10억은 57~59강 판매 몫으로 남김. 처음부터 48판 50% −2.5h · 70% 이상은 융합이 굶어 무너짐'],
     ['sell49FuseV','융합 중 자판기 두 대가 N강을 살 때까지 49강 안 팜','int','0 = 안 씀. 51이면 자판기 51/51 전까지 단수 멈춤 (지금 흐름 60%에서 109.4h vs 106.5h로 약간 손해, 예전엔 40%와 같았음)'],
     ['sell49PreFrac','54강 판매 구간 49강 판매 비율','num','0~1, 기본 0.8(새 후반 빌드와 함께 60강 기대 0.693 시각: 지금 상태 0.4 154h · 0.6 150h · 0.8 146h, 처음부터 0.6 166h · 0.8 159h. 그 전 비교 — 초월 813 · 우주 +12 · 흑백 16 · 단수 1.25억 시작 24판, 우주 +14부터 55·56강 판매와 함께: 0.4 191/195h · 0.6 184/193h · 0.8 187/186h — 첫 60강은 같고 0.6이 초월 69h 3,201 · 우주 +17 43h로 0.8(2,499 · 123h)보다 앞섬, 단수는 6.3억 vs 7.1억) — 「49강 판매 구간」이 우주 +N 전까지 늘일 때 49강을 이 비율만 팖. 1(전부)이면 크레딧이 넉넉해지는 우주 +14쯤부터 50강이 안 나와 54강 판매·초월이 멈춤. 2인·T.027 48판 첫 60강 중앙 약 237 → 205h, 우주 +15 190 → 28h (초월 353 · 단수 1.2억 시작 24판: 0.6 207h · 0.8 199h · 0.95 207h · 전부 238h · 판단대로 245h)'],
     ['fiDaily','엑보 줄 하루 해금','select','정식 출시 첫날은 25,000타까지, 둘째 날부터 만 → 억 → 조 → 경 → 해 → 자 묶음을 하루에 하나씩(판을 시작한 날 기준, 매일 18시, 7일째에 자 묶음까지 다 열림). 끄면 공개 테스트처럼 25,000타에서 멈춤',[['on','켬 (정식)'],['off','끔 (25,000타까지)']]],
